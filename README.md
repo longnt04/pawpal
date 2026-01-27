@@ -11,24 +11,6 @@
 - **Authentication**: Supabase Auth
 - **Deployment**: Vercel
 
-## 🏗️ Kiến Trúc Hệ Thống
-
-### Mô Hình User-Pet
-
-Hệ thống được thiết kế theo mô hình người dùng – thú cưng (User–Pet model):
-
-- **Người dùng (User)**: Chủ sở hữu tài khoản
-  - Đăng ký / Đăng nhập
-  - Quản lý thông tin cá nhân
-  - Quản lý các thú cưng thuộc sở hữu
-
-- **Thú cưng (Pet)**: Đối tượng tham gia hoạt động
-  - Hiển thị hồ sơ
-  - Thực hiện matching (swipe)
-  - Nhắn tin sau khi match
-
-**Mối quan hệ**: Một người dùng có thể sở hữu nhiều thú cưng (1-N)
-
 ## 🚀 Getting Started
 
 ### 1. Install Dependencies
