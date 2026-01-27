@@ -127,13 +127,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // Upload user avatar if provided
-      let avatarUrl = null;
-      if (userAvatar) {
-        avatarUrl = await uploadImage(userAvatar, "avatars");
-      }
-
-      // Register with Supabase Auth
+      // Register with Supabase Auth first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -141,7 +135,6 @@ export default function RegisterPage() {
           data: {
             full_name: fullName,
             phone: phone,
-            avatar_url: avatarUrl,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -153,7 +146,13 @@ export default function RegisterPage() {
         throw new Error("Không thể tạo tài khoản");
       }
 
-      // Create user profile in database
+      // Now user is authenticated, upload user avatar if provided
+      let avatarUrl = null;
+      if (userAvatar) {
+        avatarUrl = await uploadImage(userAvatar, "avatars");
+      }
+
+      // Create user profile in database with avatar
       const { error: profileError } = await supabase.from("users").insert([
         {
           id: authData.user.id,
