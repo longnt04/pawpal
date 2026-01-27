@@ -12,7 +12,10 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 401 });
+    return NextResponse.json(
+      { error: "Tài khoản hoặc mật khẩu không chính xác" },
+      { status: 401 },
+    );
   }
 
   return NextResponse.json(

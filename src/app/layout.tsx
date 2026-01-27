@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PawPal - Tinder cho thú cưng",
+  title: "PawPal - Hẹn hò, kết bạn",
   description: "Tìm bạn cho thú cưng của bạn và mua sắm đồ thú cưng",
 };
 

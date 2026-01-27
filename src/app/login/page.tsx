@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { GiPawHeart } from "react-icons/gi";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -25,8 +26,18 @@ export default function LoginPage() {
 
       if (error) throw error;
 
+      // Check if user has completed setup
+      const checkResponse = await fetch("/api/auth/check-setup");
+      const { setupCompleted } = await checkResponse.json();
+
       toast.success("Đăng nhập thành công!");
-      router.push("/");
+
+      if (!setupCompleted) {
+        router.push("/setup");
+      } else {
+        router.push("/");
+      }
+
       router.refresh();
     } catch (error: any) {
       toast.error(error.message || "Đăng nhập thất bại");
@@ -36,14 +47,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100">
-      <div className="w-full max-w-md px-8 py-10 bg-white rounded-3xl shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      <div className="w-full max-w-md px-8 py-10 bg-gray-800 rounded-3xl shadow-2xl">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-            🐾 PawPal
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent flex items-center justify-center gap-2">
+            <GiPawHeart className="text-5xl" /> PawPal
           </h1>
-          <p className="text-gray-500 mt-2">Tìm bạn cho thú cưng của bạn</p>
+          <p className="text-gray-400 mt-2">Tìm bạn cho thú cưng của bạn</p>
         </div>
 
         {/* Login Form */}
@@ -51,7 +62,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-gray-300 mb-2"
             >
               Email
             </label>
@@ -61,14 +72,14 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl text-black border border-gray-300 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 rounded-xl text-white bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
             />
           </div>
 
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-black mb-2"
+              className="block text-sm font-medium text-gray-300 mb-2"
             >
               Mật khẩu
             </label>
@@ -78,8 +89,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl text-black border border-gray-300 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
-          
+              className="w-full px-4 py-3 rounded-xl text-white bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
             />
           </div>
 
@@ -94,11 +104,11 @@ export default function LoginPage() {
 
         {/* Divider */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-400">
             Chưa có tài khoản?{" "}
             <Link
               href="/register"
-              className="text-pink-600 hover:text-pink-700 font-semibold"
+              className="text-pink-500 hover:text-pink-400 font-semibold"
             >
               Đăng ký ngay
             </Link>

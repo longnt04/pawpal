@@ -37,7 +37,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes
+  // Skip middleware logic for API routes
+  if (request.nextUrl.pathname.startsWith("/api")) {
+    return supabaseResponse;
+  }
+
+  // Protected routes - redirect to login if not authenticated
   if (
     !user &&
     !request.nextUrl.pathname.startsWith("/login") &&
@@ -47,6 +52,38 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
+  }
+
+  // Check if user is authenticated and not on setup page
+  if (user && !request.nextUrl.pathname.startsWith("/setup")) {
+    // Check if user has at least one pet (means setup completed)
+    const { data: pets } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("owner_id", user.id)
+      .limit(1);
+
+    // Redirect to setup if no pets (setup not completed)
+    if (!pets || pets.length === 0) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/setup";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // If user is on setup page and already has pets, redirect to home
+  if (user && request.nextUrl.pathname.startsWith("/setup")) {
+    const { data: pets } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("owner_id", user.id)
+      .limit(1);
+
+    if (pets && pets.length > 0) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

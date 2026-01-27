@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  /* PawPal Pink-Red Gradient Theme - Dark Mode */
+  --primary: #dc2626;
+  --primary-light: #ec4899;
+  --primary-bg: #1a1a1a;
+  --primary-gradient: linear-gradient(
+    to bottom right,
+    #fce7f3 0%,
+    #fee2e2 100%
+  );
+
+  --text-main: #ededed;
+  --text-sub: #9ca3af;
+  --border: #374151;
+  --bg-gray: #111111;
 }
 
 @theme inline {
@@ -10,17 +25,62 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* PawPal Colors - Pink to Red */
+  --color-primary: #dc2626;
+  --color-primary-light: #ec4899;
+  --color-primary-bg: #1a1a1a;
+
+  /* Alias pink-500 & purple-600 to new gradient colors for backward compatibility */
+  --color-pink-500: #ec4899;
+  --color-pink-600: #db2777;
+  --color-purple-600: #dc2626;
+  --color-purple-700: #b91c1c;
+  --color-pink-100: #fce7f3;
+  --color-purple-100: #fee2e2;
+  --color-pink-50: #fdf2f8;
+  --color-red-50: #fef2f2;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  .card-swipe {
+    @apply relative overflow-hidden rounded-2xl shadow-lg bg-gray-800 border border-gray-700;
+  }
+
+  .match-button {
+    @apply bg-gradient-to-r from-pink-500 to-red-500 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-200;
+  }
+
+  .chat-container {
+    @apply bg-gray-900 rounded-lg shadow-sm border border-gray-700;
+  }
+
+  /* Custom scrollbar styles for chat */
+  .chat-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 transparent;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
 }
