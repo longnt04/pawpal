@@ -3,8 +3,17 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Suspense } from "react";
 
-export default function SuccessPage() {
+export default function SuccessPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SuccessPage />
+    </Suspense>
+  );
+}
+
+export function SuccessPage() {
   const router = useRouter();
   const params = useSearchParams();
   const supabase = createClient();
@@ -17,7 +26,6 @@ export default function SuccessPage() {
       images: string[];
     }[];
   };
-
 
   useEffect(() => {
     const saveOrder = async () => {
@@ -43,10 +51,9 @@ export default function SuccessPage() {
         body: JSON.stringify({
           orderCode,
           userId: user.id,
-          items, 
+          items,
         }),
       });
-      
 
       // ⏳ Chờ 3 giây rồi về shop
       setTimeout(() => {
