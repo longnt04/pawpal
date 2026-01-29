@@ -12,6 +12,8 @@ import {
   IoPerson,
   IoHeart,
   IoLogOut,
+  IoCart,
+  IoReceipt,
 } from "react-icons/io5";
 import { GiPawHeart } from "react-icons/gi";
 
@@ -59,7 +61,9 @@ export default function TopBar() {
     { name: "Match", path: "/match", icon: IoHeart },
     { name: "Shop", path: "/shop", icon: IoStorefront },
     { name: "Messages", path: "/messages", icon: IoChatbubbles },
-    { name: "Profile", path: "/profile", icon: IoPerson },
+    { name: "Cart", path: "/cart", icon: IoCart },
+    { name: "Orders", path: "/orders", icon: IoReceipt },
+
   ];
 
   return (

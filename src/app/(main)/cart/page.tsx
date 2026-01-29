@@ -1,0 +1,203 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
+import toast from "react-hot-toast";
+import { Trash2 } from "lucide-react";
+
+export default function CartPage() {
+  const supabase = createClient();
+  const [items, setItems] = useState<any[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  const fetchCart = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("cart_items")
+      .select("id, quantity, products(*)")
+      .eq("user_id", user.id);
+
+    setItems(data || []);
+  };
+
+  const updateQuantity = async (id: string, quantity: number) => {
+    if (quantity < 1) return;
+
+    await supabase.from("cart_items").update({ quantity }).eq("id", id);
+    fetchCart();
+  };
+
+  const removeItem = async (id: string) => {
+    await supabase.from("cart_items").delete().eq("id", id);
+    toast.success("Đã xoá sản phẩm");
+    fetchCart();
+  };
+
+  const total = items.reduce(
+    (sum, item) => sum + item.products.price * item.quantity,
+    0
+  );
+
+  const handleCheckout = async () => {
+    if (items.length === 0) return toast.error("Giỏ hàng trống");
+  
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+  
+    if (!user) return toast.error("Vui lòng đăng nhập");
+  
+    // COD → tạo đơn hàng trực tiếp
+    if (paymentMethod === "cod") {
+      const { error } = await supabase.from("orders").insert({
+        user_id: user.id,
+        total_amount: total,
+        payment_method: "COD",
+        status: "pending",
+      });
+  
+      if (error) return toast.error("Không thể tạo đơn hàng");
+  
+      await supabase.from("cart_items").delete().eq("user_id", user.id);
+  
+      toast.success("Đặt hàng thành công! 🐾");
+      fetchCart();
+      return;
+    }
+  
+    // PayOS → gọi API tạo link thanh toán
+    const res = await fetch("/api/create-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+  
+    const data = await res.json();
+  
+    if (data.checkoutUrl) {
+      window.location.href = data.checkoutUrl;
+    } else {
+      toast.error("Không tạo được link thanh toán");
+    }
+  };
+  
+
+
+  return (
+    <div className="min-h-screen bg-gray-900 px-6 py-12 text-white">
+      <h1 className="text-4xl font-bold mb-10 bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+        🛒 Giỏ hàng của bạn
+      </h1>
+
+      <div className="grid lg:grid-cols-3 gap-10">
+        {/* Danh sách sản phẩm */}
+        <div className="lg:col-span-2 space-y-6">
+          {items.length === 0 && (
+            <p className="text-gray-400">Giỏ hàng đang trống...</p>
+          )}
+
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex gap-4 bg-gray-800 p-4 rounded-2xl items-center"
+            >
+              <Image
+                src={item.products.images?.[0] || "/no-image.png"}
+                alt={item.products.name}
+                width={50}
+                height={50}
+                className="rounded-lg object-cover"
+              />
+
+              <div className="flex-1">
+                <h2 className="font-semibold">{item.products.name}</h2>
+                <p className="text-pink-400 font-bold">
+                  {item.products.price.toLocaleString()}₫
+                </p>
+
+                {/* Quantity */}
+                <div className="flex items-center gap-3 mt-2">
+                  <button
+                    onClick={() =>
+                      updateQuantity(item.id, item.quantity - 1)
+                    }
+                    className="px-2 py-1 bg-gray-700 rounded"
+                  >
+                    −
+                  </button>
+                  <span>{item.quantity}</span>
+                  <button
+                    onClick={() =>
+                      updateQuantity(item.id, item.quantity + 1)
+                    }
+                    className="px-2 py-1 bg-gray-700 rounded"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <button onClick={() => removeItem(item.id)}>
+                <Trash2 className="text-red-400 hover:text-red-500" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Thanh toán */}
+        <div className="bg-gray-800 p-6 rounded-2xl h-fit">
+          <h2 className="text-xl font-semibold mb-4">Thanh toán</h2>
+
+          <div className="space-y-3 mb-6">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="cod"
+                checked={paymentMethod === "cod"}
+                onChange={() => setPaymentMethod("cod")}
+              />
+              Thanh toán khi nhận hàng (COD)
+            </label>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="bank"
+                checked={paymentMethod === "bank"}
+                onChange={() => setPaymentMethod("bank")}
+              />
+              Chuyển khoản ngân hàng
+            </label>
+          </div>
+
+          <div className="flex justify-between text-lg font-semibold mb-6">
+            <span>Tổng tiền:</span>
+            <span className="text-pink-400">
+              {total.toLocaleString()}₫
+            </span>
+          </div>
+
+          <button
+            onClick={handleCheckout}
+            disabled={items.length === 0}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
+          >
+            {paymentMethod === "cod"
+              ? "Đặt hàng (COD)"
+              : "Thanh toán online"}
+          </button>
+
+        </div>
+      </div>
+    </div>
+  );
+}
