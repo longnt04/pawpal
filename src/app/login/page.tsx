@@ -30,8 +30,6 @@ export default function LoginPage() {
       const checkResponse = await fetch("/api/auth/check-setup");
       const { setupCompleted } = await checkResponse.json();
 
-      toast.success("Đăng nhập thành công!");
-
       if (!setupCompleted) {
         router.push("/setup");
       } else {
@@ -40,7 +38,7 @@ export default function LoginPage() {
 
       router.refresh();
     } catch (error: any) {
-      toast.error(error.message || "Đăng nhập thất bại");
+      toast.error("Tài khoản hoặc mật khẩu không đúng");
     } finally {
       setLoading(false);
     }

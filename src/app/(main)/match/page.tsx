@@ -9,8 +9,6 @@ import {
   IoArrowUndo,
   IoFilter,
   IoLocationOutline,
-  IoArrowForward,
-  IoArrowBack,
 } from "react-icons/io5";
 import { FaRegHeart } from "react-icons/fa";
 
@@ -64,6 +62,17 @@ export default function MatchPage() {
   const [ageFilter, setAgeFilter] = useState<string[]>([]);
   const [distanceFilter, setDistanceFilter] = useState<number>(10);
 
+  // Animation states
+  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(
+    null,
+  );
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Drag states
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -101,8 +110,6 @@ export default function MatchPage() {
 
       const petIds = userPets.map((p) => p.id);
 
-      console.log("User pet IDs:", petIds);
-
       // Try simpler query first
       const { data: matches, error: matchError } = await supabase
         .from("matches")
@@ -114,16 +121,11 @@ export default function MatchPage() {
         console.error("Match query error:", matchError);
         return;
       }
-
-      console.log("All matches in DB:", matches);
-
       // Filter matches that involve user's pets
       const userMatches = matches?.filter(
         (match) =>
           petIds.includes(match.pet_1_id) || petIds.includes(match.pet_2_id),
       );
-
-      console.log("User's matches:", userMatches);
 
       if (userMatches && userMatches.length > 0) {
         const matchesWithPets = await Promise.all(
@@ -139,7 +141,6 @@ export default function MatchPage() {
             return { ...match, pet };
           }),
         );
-        console.log("Matches with pet info:", matchesWithPets);
         setRecentMatches(matchesWithPets);
       }
     } catch (error) {
@@ -183,6 +184,8 @@ export default function MatchPage() {
           }),
         );
         setPendingRequests(requestsWithPets);
+      } else {
+        setPendingRequests([]);
       }
     } catch (error) {
       console.error("Error fetching pending requests:", error);
@@ -292,6 +295,34 @@ export default function MatchPage() {
 
       let filteredPets = availablePets || [];
 
+      // Filter out pets that are already matched
+      const { data: userMatches } = await supabase
+        .from("matches")
+        .select("pet_1_id, pet_2_id")
+        .or(
+          `pet_1_id.eq.${currentUserPet.id},pet_2_id.eq.${currentUserPet.id}`,
+        );
+
+      const matchedPetIds = new Set<string>();
+      userMatches?.forEach((match) => {
+        if (match.pet_1_id !== currentUserPet.id)
+          matchedPetIds.add(match.pet_1_id);
+        if (match.pet_2_id !== currentUserPet.id)
+          matchedPetIds.add(match.pet_2_id);
+      });
+
+      // Filter out pets that have already been swiped
+      const { data: userSwipes } = await supabase
+        .from("swipes")
+        .select("to_pet_id")
+        .eq("from_pet_id", currentUserPet.id);
+
+      const swipedPetIds = new Set<string>(userSwipes?.map(s => s.to_pet_id) || []);
+
+      filteredPets = filteredPets.filter((pet) => 
+        !matchedPetIds.has(pet.id) && !swipedPetIds.has(pet.id)
+      );
+
       if (ageFilter.length > 0) {
         filteredPets = filteredPets.filter((pet) =>
           ageFilter.includes(getAgeCategory(pet.age)),
@@ -306,7 +337,10 @@ export default function MatchPage() {
     }
   };
 
-  const handleSwipe = async (action: "like" | "dislike" | "favorite") => {
+  const handleSwipe = async (
+    action: "like" | "dislike" | "favorite",
+    animated: boolean = true,
+  ) => {
     if (!currentUserPet || !pets[currentIndex]) return;
 
     const targetPet = pets[currentIndex];
@@ -325,12 +359,6 @@ export default function MatchPage() {
         { petId: targetPet.id, action: action },
       ]);
 
-      // Cập nhật swipe status
-      setPetSwipeStatus({
-        ...petSwipeStatus,
-        [targetPet.id]: action === "favorite" ? "like" : action,
-      });
-
       if (action === "like" || action === "favorite") {
         toast.success(`Đã gửi lời mời kết bạn đến ${targetPet.name}!`);
       }
@@ -338,15 +366,141 @@ export default function MatchPage() {
       if (action === "favorite") {
         toast.success(`⭐ Đã lưu ${targetPet.name} vào yêu thích!`);
       }
+
+      // Auto advance to next card
+      if (animated && currentIndex < pets.length) {
+        setIsAnimating(true);
+        setSwipeDirection(
+          action === "like" || action === "favorite" ? "right" : "left",
+        );
+
+        setTimeout(() => {
+          setCurrentIndex(currentIndex + 1);
+          setSwipeDirection(null);
+          setIsAnimating(false);
+        }, 800);
+      } else if (!animated) {
+        setCurrentIndex(currentIndex + 1);
+      }
     } catch (error: any) {
       console.error("Swipe error:", error);
       toast.error("Có lỗi xảy ra");
     }
   };
 
-  const handleUndo = () => {
-    if (currentIndex === 0) return;
-    setCurrentIndex(currentIndex - 1);
+  const handleUndo = async () => {
+    if (swipeHistory.length === 0 || isAnimating || currentIndex === 0) return;
+
+    const lastSwipe = swipeHistory[swipeHistory.length - 1];
+
+    try {
+      // Delete the last swipe from database
+      const { error } = await supabase
+        .from("swipes")
+        .delete()
+        .eq("from_pet_id", currentUserPet?.id)
+        .eq("to_pet_id", lastSwipe.petId);
+
+      if (error) throw error;
+
+      // Remove from history
+      setSwipeHistory(swipeHistory.slice(0, -1));
+
+      // Go back one card
+      setCurrentIndex(currentIndex - 1);
+
+    } catch (error: any) {
+      console.error("Undo error:", error);
+      toast.error("Không thể hoàn tác");
+    }
+  };
+
+  // Drag handlers
+  const handleDragStart = (clientX: number, clientY: number) => {
+    if (isAnimating) return;
+    setIsDragging(true);
+    setDragStartPos({ x: clientX, y: clientY });
+  };
+
+  const handleDragMove = (clientX: number, clientY: number) => {
+    if (!isDragging || isAnimating) return;
+
+    const deltaX = clientX - dragStartPos.x;
+    const deltaY = clientY - dragStartPos.y;
+
+    setDragOffset({ x: deltaX, y: deltaY });
+  };
+
+  const handleDragEnd = () => {
+    if (!isDragging || isAnimating) return;
+
+    const swipeThreshold = 100;
+
+    if (Math.abs(dragOffset.x) > swipeThreshold) {
+      // Card đã vượt threshold - bay từ vị trí hiện tại
+      setIsDragging(false);
+      setIsAnimating(true);
+
+      // Determine swipe direction based on drag
+      const direction = dragOffset.x > 0 ? "right" : "left";
+      const action = dragOffset.x > 0 ? "like" : "dislike";
+
+      setSwipeDirection(direction);
+
+      // Save to database and advance
+      const saveSwipe = async () => {
+        if (!currentUserPet || !pets[currentIndex]) return;
+        const targetPet = pets[currentIndex];
+
+        try {
+          await supabase.from("swipes").upsert(
+            {
+              from_pet_id: currentUserPet.id,
+              to_pet_id: targetPet.id,
+              action: action,
+            },
+            { onConflict: "from_pet_id,to_pet_id" },
+          );
+
+          setSwipeHistory([
+            ...swipeHistory,
+            { petId: targetPet.id, action: action },
+          ]);
+
+          if (action === "like") {
+            toast.success(`Đã gửi lời mời kết bạn đến ${targetPet.name}!`);
+          }
+        } catch (error) {
+          console.error("Swipe error:", error);
+        }
+      };
+
+      saveSwipe();
+
+      // Wait for animation then advance
+      setTimeout(() => {
+        setCurrentIndex(currentIndex + 1);
+        setSwipeDirection(null);
+        setIsAnimating(false);
+        setDragOffset({ x: 0, y: 0 });
+      }, 800);
+    } else {
+      // Không đủ threshold - reset về gốc
+      setIsDragging(false);
+      setDragOffset({ x: 0, y: 0 });
+    }
+  };
+
+  const getDragRotation = () => {
+    const maxRotation = 15;
+    const rotation = (dragOffset.x / 500) * maxRotation;
+    return rotation;
+  };
+
+  const getDragOpacity = () => {
+    const maxDistance = 200;
+    const opacity = 1 - Math.abs(dragOffset.x) / maxDistance;
+    return Math.max(0.5, opacity);
   };
 
   const toggleAgeFilter = (category: string) => {
@@ -495,18 +649,110 @@ export default function MatchPage() {
               </div>
             ) : (
               <div className="max-w-md mx-auto">
+                <style>{`
+                  .swipe-card {
+                    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                                opacity 0.8s ease-out;
+                  }
+                  
+                  .swipe-card.swiping-left {
+                    animation: swipeLeft 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                  }
+                  
+                  .swipe-card.swiping-right {
+                    animation: swipeRight 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                  }
+                  
+                  @keyframes swipeLeft {
+                    0% {
+                      transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+                      opacity: 1;
+                    }
+                    20% {
+                      transform: translateX(-10%) translateY(5%) rotate(-3deg) scale(0.98);
+                      opacity: 1;
+                    }
+                    100% {
+                      transform: translateX(-150%) translateY(-30%) rotate(-35deg) scale(0.7);
+                      opacity: 0;
+                    }
+                  }
+                  
+                  @keyframes swipeRight {
+                    0% {
+                      transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+                      opacity: 1;
+                    }
+                    20% {
+                      transform: translateX(10%) translateY(5%) rotate(3deg) scale(0.98);
+                      opacity: 1;
+                    }
+                    100% {
+                      transform: translateX(150%) translateY(-30%) rotate(35deg) scale(0.7);
+                      opacity: 0;
+                    }
+                  }
+                  
+                  .card-enter {
+                    animation: cardEnter 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                  }
+                  
+                  @keyframes cardEnter {
+                    0% {
+                      transform: scale(0.85) translateY(40px);
+                      opacity: 0;
+                    }
+                    50% {
+                      transform: scale(1.03) translateY(-8px);
+                      opacity: 0.8;
+                    }
+                    100% {
+                      transform: scale(1) translateY(0);
+                      opacity: 1;
+                    }
+                  }
+                `}</style>
+
                 {/* Pet Card */}
-                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-8">
+                <div
+                  key={`${currentIndex}-${currentPet.id}`}
+                  className={`swipe-card card-enter bg-white rounded-3xl shadow-2xl overflow-hidden mb-8 cursor-grab active:cursor-grabbing select-none ${
+                    swipeDirection === "left" ? "swiping-left" : ""
+                  } ${swipeDirection === "right" ? "swiping-right" : ""}`}
+                  style={{
+                    transform:
+                      isDragging || swipeDirection
+                        ? `translateX(${dragOffset.x}px) translateY(${dragOffset.y}px) rotate(${getDragRotation()}deg)`
+                        : undefined,
+                    transition: isDragging
+                      ? "none"
+                      : swipeDirection
+                        ? undefined
+                        : "transform 0.3s ease-out",
+                  }}
+                  onMouseDown={(e) => handleDragStart(e.clientX, e.clientY)}
+                  onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
+                  onMouseUp={handleDragEnd}
+                  onMouseLeave={handleDragEnd}
+                  onTouchStart={(e) =>
+                    handleDragStart(e.touches[0].clientX, e.touches[0].clientY)
+                  }
+                  onTouchMove={(e) =>
+                    handleDragMove(e.touches[0].clientX, e.touches[0].clientY)
+                  }
+                  onTouchEnd={handleDragEnd}
+                >
                   {/* Pet Image */}
                   <div className="relative h-[500px] bg-gradient-to-br from-gray-200 to-gray-300">
                     {currentPet.avatar_url ? (
                       <img
                         src={currentPet.avatar_url}
                         alt={currentPet.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover pointer-events-none"
+                        draggable="false"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-9xl">
+                      <div className="w-full h-full flex items-center justify-center text-9xl pointer-events-none">
                         {currentPet.species === "dog"
                           ? "🐕"
                           : currentPet.species === "cat"
@@ -515,25 +761,38 @@ export default function MatchPage() {
                       </div>
                     )}
                     {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
 
-                    {/* Swipe Status Badge */}
-                    {petSwipeStatus[currentPet.id] && (
+                    {/* Dynamic Drag Overlay - LIKE */}
+                    {isDragging && dragOffset.x > 30 && (
                       <div
-                        className={`absolute top-8 right-8 px-6 py-3 rounded-2xl border-4 font-black text-3xl rotate-12 ${
-                          petSwipeStatus[currentPet.id] === "like"
-                            ? "border-green-500 text-green-500"
-                            : "border-red-500 text-red-500"
-                        }`}
+                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                        style={{
+                          opacity: Math.min(Math.abs(dragOffset.x) / 100, 1),
+                        }}
                       >
-                        {petSwipeStatus[currentPet.id] === "like"
-                          ? "LIKE"
-                          : "NOPE"}
+                        <div className="px-8 py-4 rounded-2xl border-4 border-green-500 text-green-500 font-black text-5xl rotate-12 bg-white/10 backdrop-blur-sm">
+                          LIKE
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dynamic Drag Overlay - NOPE */}
+                    {isDragging && dragOffset.x < -30 && (
+                      <div
+                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                        style={{
+                          opacity: Math.min(Math.abs(dragOffset.x) / 100, 1),
+                        }}
+                      >
+                        <div className="px-8 py-4 rounded-2xl border-4 border-red-500 text-red-500 font-black text-5xl -rotate-12 bg-white/10 backdrop-blur-sm">
+                          NOPE
+                        </div>
                       </div>
                     )}
 
                     {/* Pet Info Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white pointer-events-none">
                       <h2 className="text-4xl font-bold mb-2">
                         {currentPet.name}{" "}
                         <span className="text-3xl font-light">
@@ -551,7 +810,7 @@ export default function MatchPage() {
                   </div>
 
                   {/* Pet Bio */}
-                  <div className="p-6 bg-gradient-to-br from-gray-50 to-white">
+                  <div className="p-6 bg-gradient-to-br from-gray-50 to-white pointer-events-none">
                     <p className="text-gray-700 text-center line-clamp-2">
                       {currentPet.bio ?? "..."}
                     </p>
@@ -563,55 +822,66 @@ export default function MatchPage() {
                   {/* Dislike Button */}
                   <button
                     onClick={() => handleSwipe("dislike")}
-                    disabled={!!petSwipeStatus[currentPet.id]}
+                    disabled={isAnimating}
                     className={`group w-16 h-16 rounded-full bg-white border-2 flex items-center justify-center transition-all shadow-lg ${
-                      petSwipeStatus[currentPet.id]
+                      isAnimating
                         ? "border-gray-300 cursor-not-allowed opacity-50"
                         : "border-red-400 hover:bg-red-50 hover:shadow-xl hover:scale-110"
                     }`}
                   >
-                    <IoClose className={`text-4xl transition-transform ${
-                      petSwipeStatus[currentPet.id]
-                        ? "text-gray-400"
-                        : "text-red-500 group-hover:scale-125"
-                    }`} />
+                    <IoClose
+                      className={`text-4xl transition-transform ${
+                        isAnimating
+                          ? "text-gray-400"
+                          : "text-red-500 group-hover:scale-125"
+                      }`}
+                    />
                   </button>
 
+                  {/* Undo Button */}
                   <button
-                    onClick={() => {
-                      if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
-                    }}
-                    className="group w-16 h-16 rounded-full bg-white border-2 border-blue-400 hover:bg-blue-50 flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-110"
+                    onClick={handleUndo}
+                    disabled={
+                      swipeHistory.length === 0 ||
+                      currentIndex === 0 ||
+                      isAnimating
+                    }
+                    className={`group w-14 h-14 rounded-full bg-white border-2 flex items-center justify-center transition-all shadow-lg ${
+                      swipeHistory.length === 0 ||
+                      currentIndex === 0 ||
+                      isAnimating
+                        ? "border-gray-300 cursor-not-allowed opacity-50"
+                        : "border-yellow-400 hover:bg-yellow-50 hover:shadow-xl hover:scale-110"
+                    }`}
                   >
-                    <IoArrowBack className="text-4xl text-blue-500 group-hover:scale-125 transition-transform" />
+                    <IoArrowUndo
+                      className={`text-3xl transition-transform ${
+                        swipeHistory.length === 0 ||
+                        currentIndex === 0 ||
+                        isAnimating
+                          ? "text-gray-400"
+                          : "text-yellow-500 group-hover:scale-125 group-hover:-rotate-12"
+                      }`}
+                    />
                   </button>
 
                   {/* Like Button */}
                   <button
                     onClick={() => handleSwipe("like")}
-                    disabled={!!petSwipeStatus[currentPet.id]}
+                    disabled={isAnimating}
                     className={`group w-16 h-16 rounded-full bg-white border-2 flex items-center justify-center transition-all ${
-                      petSwipeStatus[currentPet.id]
+                      isAnimating
                         ? "border-gray-300 cursor-not-allowed opacity-50 shadow-lg"
                         : "border-red-400 hover:bg-red-50 shadow-xl hover:shadow-2xl hover:scale-110"
                     }`}
                   >
-                    <FaRegHeart className={`text-4xl transition-transform ${
-                      petSwipeStatus[currentPet.id]
-                        ? "text-gray-400"
-                        : "text-red-500 group-hover:scale-125"
-                    }`} />
-                  </button>
-
-                  {/* Next Button */}
-                  <button
-                    onClick={() => {
-                      if (currentIndex < pets.length - 1)
-                        setCurrentIndex(currentIndex + 1);
-                    }}
-                    className="group w-16 h-16 rounded-full bg-white border-2 border-blue-400 hover:bg-blue-50 flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-110"
-                  >
-                    <IoArrowForward className="text-4xl text-blue-500 group-hover:scale-125 transition-transform" />
+                    <FaRegHeart
+                      className={`text-4xl transition-transform ${
+                        isAnimating
+                          ? "text-gray-400"
+                          : "text-red-500 group-hover:scale-125"
+                      }`}
+                    />
                   </button>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { IoHeart, IoChatbubbles, IoShareSocial, IoSend } from "react-icons/io5";
 import toast from "react-hot-toast";
@@ -36,6 +36,7 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
+  const replyFormRef = useRef<HTMLDivElement>(null);
 
   const pet = post.pets;
   const DEFAULT_COMMENTS_LIMIT = 5;
@@ -44,6 +45,26 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
     loadPostData();
     getCurrentUser();
   }, [post.id]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        replyFormRef.current &&
+        !replyFormRef.current.contains(event.target as Node)
+      ) {
+        setReplyingTo(null);
+        setReplyContent("");
+      }
+    };
+
+    if (replyingTo) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [replyingTo]);
 
   const getCurrentUser = async () => {
     const {
@@ -86,24 +107,55 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
   const loadComments = async () => {
     const { data: commentsData, count } = await supabase
       .from("post_comments")
-      .select("*, users(full_name, avatar_url)", { count: "exact" })
+      .select("*", { count: "exact" })
       .eq("post_id", post.id)
       .is("parent_comment_id", null)
       .order("created_at", { ascending: true })
       .limit(showAllComments ? 1000 : DEFAULT_COMMENTS_LIMIT);
 
     if (commentsData) {
+      const commentUserIds = [...new Set(commentsData.map((c) => c.user_id))];
+      const { data: commentUsers } = await supabase
+        .from("users")
+        .select("id, full_name, avatar_url")
+        .in("id", commentUserIds);
+
+      const commentUsersMap = new Map(
+        commentUsers?.map((u) => [u.id, u]) || [],
+      );
+
       // Load replies for each comment
       const commentsWithReplies = await Promise.all(
         commentsData.map(async (comment) => {
           const { data: replies } = await supabase
             .from("post_comments")
-            .select("*, users(full_name, avatar_url)")
+            .select("*")
             .eq("parent_comment_id", comment.id)
             .order("created_at", { ascending: true });
 
-          return { ...comment, replies: replies || [] };
-        })
+          let repliesWithUsers = [];
+          if (replies && replies.length > 0) {
+            const replyUserIds = [...new Set(replies.map((r) => r.user_id))];
+            const { data: replyUsers } = await supabase
+              .from("users")
+              .select("id, full_name, avatar_url")
+              .in("id", replyUserIds);
+
+            const replyUsersMap = new Map(
+              replyUsers?.map((u) => [u.id, u]) || [],
+            );
+            repliesWithUsers = replies.map((reply) => ({
+              ...reply,
+              users: replyUsersMap.get(reply.user_id),
+            }));
+          }
+
+          return {
+            ...comment,
+            users: commentUsersMap.get(comment.user_id),
+            replies: repliesWithUsers,
+          };
+        }),
       );
 
       setComments(commentsWithReplies);
@@ -232,22 +284,26 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
     }
   };
 
+  console.log(comments);
+
   return (
     <div className="card-swipe mb-6">
       {/* Pet Info Header */}
       <div className="p-4 flex items-center gap-3 border-b border-gray-700">
         <div className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold overflow-hidden">
           {pet?.avatar_url ? (
-            <img src={pet.avatar_url} alt={pet.name} className="w-full h-full object-cover" />
+            <img
+              src={pet.avatar_url}
+              alt={pet.name}
+              className="w-full h-full object-cover"
+            />
           ) : (
             pet?.name?.[0] || "P"
           )}
         </div>
         <div className="flex-1">
           <h3 className="font-bold text-gray-200">{pet?.name || "Pet"}</h3>
-          <p className="text-sm text-gray-400">
-             {getTimeAgo(post.created_at)}
-          </p>
+          <p className="text-sm text-gray-400">{getTimeAgo(post.created_at)}</p>
         </div>
       </div>
 
@@ -317,16 +373,24 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
           <div className="space-y-3 mb-4">
             {comments.map((comment) => (
               <div key={comment.id}>
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
+                <div className="flex gap-2">
+                  <div className="w-8 h-8 mt-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
                     {comment.users?.avatar_url ? (
-                      <img src={comment.users.avatar_url} alt={comment.users.full_name} className="w-full h-full object-cover" />
+                      <img
+                        src={comment.users.avatar_url}
+                        alt={comment.users.full_name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      comment.users?.full_name?.[0] || "U"
+                      <img
+                        src={"/default-avatar.png"}
+                        alt={comment.users.full_name}
+                        className="w-full h-full object-cover"
+                      />
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="bg-gray-800 rounded-lg px-3 py-2">
+                    <div className="bg-gray-800 rounded-lg pr-3 py-2">
                       <p className="font-semibold text-sm text-gray-200">
                         {comment.users?.full_name || "User"}
                       </p>
@@ -335,34 +399,44 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
                     <div className="flex items-center gap-3 mt-1 ml-3 text-xs text-gray-500">
                       <span>{getTimeAgo(comment.created_at)}</span>
                       <button
-                        onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                        onClick={() =>
+                          setReplyingTo(
+                            replyingTo === comment.id ? null : comment.id,
+                          )
+                        }
                         className="hover:text-gray-400 font-medium"
                       >
                         Trả lời
                       </button>
                     </div>
-                    
+
                     {/* Reply Input */}
                     {replyingTo === comment.id && (
-                      <form onSubmit={(e) => handleReply(e, comment.id)} className="flex gap-2 mt-2">
-                        <input
-                          type="text"
-                          value={replyContent}
-                          onChange={(e) => setReplyContent(e.target.value)}
-                          placeholder="Viết câu trả lời..."
-                          className="flex-1 px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-full text-sm text-white placeholder-gray-500"
-                          autoFocus
-                        />
-                        <button
-                          type="submit"
-                          disabled={loadingComment || !replyContent.trim()}
-                          className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-full text-sm disabled:opacity-50"
+                      <div ref={replyFormRef}>
+                        <form
+                          onSubmit={(e) => handleReply(e, comment.id)}
+                          className="flex gap-2 mt-2"
                         >
-                          Gửi
-                        </button>
-                      </form>
+                          <input
+                            type="text"
+                            value={replyContent}
+                            onChange={(e) => setReplyContent(e.target.value)}
+                            placeholder="Viết câu trả lời..."
+                            id={`reply-input-${comment.id}`}
+                            className="flex-1 px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-full text-sm text-white placeholder-gray-500"
+                            autoFocus
+                          />
+                          <button
+                            type="submit"
+                            disabled={loadingComment || !replyContent.trim()}
+                            className="px-4 py-2 text-white rounded-full disabled:cursor-not-allowed"
+                          >
+                            <IoSend />
+                          </button>
+                        </form>
+                      </div>
                     )}
-                    
+
                     {/* Replies
                     {comment.replies && comment.replies.length > 0 && (
                       <div className="mt-3 space-y-2 ml-4 border-l-2 border-gray-700 pl-3">
@@ -411,7 +485,11 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
         {/* Comment Input */}
         <form onSubmit={handleComment} className="flex gap-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
-            <img src="/default-avatar.png" alt="User" className="w-full h-full object-cover" />
+            <img
+              src="/default-avatar.png"
+              alt="User"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="flex-1 flex gap-2">
             <input
