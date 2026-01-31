@@ -44,8 +44,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Kiểm tra user có sở hữu 1 trong 2 pets không
-    const hasAccess =
-      match.pet_1.owner_id === user.id || match.pet_2.owner_id === user.id;
+    const pet1 = Array.isArray(match.pet_1) ? match.pet_1[0] : match.pet_1;
+    const pet2 = Array.isArray(match.pet_2) ? match.pet_2[0] : match.pet_2;
+
+    const hasAccess = pet1?.owner_id === user.id || pet2?.owner_id === user.id;
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
