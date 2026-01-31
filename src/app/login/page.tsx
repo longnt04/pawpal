@@ -33,7 +33,18 @@ export default function LoginPage() {
       if (!setupCompleted) {
         router.push("/setup");
       } else {
-        router.push("/");
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const { data: profile } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user!.id)
+          .single();
+
+        if (profile?.role === "admin") {
+          router.push("/admin");
+        } else router.push("/");
       }
 
       router.refresh();

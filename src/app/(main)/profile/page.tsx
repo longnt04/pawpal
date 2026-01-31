@@ -448,7 +448,18 @@ export default function ProfilePage() {
               Thú cưng của tôi
             </h2>
             <button
-              onClick={() => setAddingPet(true)}
+              onClick={() => {
+                if (pets.length > 0) {
+                  toast(
+                    "Multiple pets feature will be available in a future update.",
+                    {
+                      icon: "🐾",
+                    },
+                  );
+                  return;
+                }
+                setAddingPet(true);
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600"
             >
               <IoAdd /> Thêm thú cưng
