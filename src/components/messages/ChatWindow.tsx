@@ -126,7 +126,17 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
             .single();
 
           if (data) {
-            setMessages((prev) => [...prev, data as Message]);
+            // Handle sender being an array
+            const sender = Array.isArray(data.sender)
+              ? data.sender[0]
+              : data.sender;
+
+            const message: Message = {
+              ...data,
+              sender,
+            };
+
+            setMessages((prev) => [...prev, message]);
             // Mark as read if not from current user
             if (data.sender_pet_id !== currentPetId) {
               markMessagesAsRead();
