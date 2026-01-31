@@ -2,9 +2,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { IoSend, IoImageOutline, IoClose } from "react-icons/io5";
+import {
+  IoSend,
+  IoImageOutline,
+  IoClose,
+  IoCall,
+  IoVideocam,
+} from "react-icons/io5";
 import MessageBubble from "./MessageBubble";
+import VideoCallModal from "./VideoCallModal";
 import { createClient } from "@/lib/supabase/client";
+import { WebRTCManager, CallType, CallStatus } from "@/lib/webrtc";
 
 interface Message {
   id: string;
@@ -60,12 +68,18 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
+  const [callStatus, setCallStatus] = useState<CallStatus>("idle");
+  const [callType, setCallType] = useState<CallType | null>(null);
+  const [isIncomingCall, setIsIncomingCall] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const otherTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
     null,
   );
@@ -73,6 +87,10 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     typeof supabase.channel
   > | null>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
+    null,
+  );
+  const webrtcManagerRef = useRef<WebRTCManager | null>(null);
+  const callChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
     null,
   );
   const supabase = createClient();
@@ -110,8 +128,23 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         typingChannelRef.current.unsubscribe();
         typingChannelRef.current = null;
       }
+      if (callChannelRef.current) {
+        callChannelRef.current.unsubscribe();
+        callChannelRef.current = null;
+      }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+      }
+      if (otherTypingTimeoutRef.current) {
+        clearTimeout(otherTypingTimeoutRef.current);
+      }
+      // End any active call
+      if (webrtcManagerRef.current) {
+        webrtcManagerRef.current.endCall();
+        webrtcManagerRef.current = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
       }
     };
   }, [match]);
@@ -334,9 +367,21 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       .on("broadcast", { event: "typing" }, (payload) => {
         // Only show typing if it's from the other person
         if (payload.payload.petId !== currentPetId) {
-          setIsOtherTyping(true);
-          // Auto hide after 3 seconds
-          setTimeout(() => setIsOtherTyping(false), 3000);
+          // Clear previous timeout to avoid multiple timers
+          if (otherTypingTimeoutRef.current) {
+            clearTimeout(otherTypingTimeoutRef.current);
+          }
+
+          // Only update state if not already typing (prevent unnecessary re-renders)
+          setIsOtherTyping((prev) => {
+            if (!prev) return true;
+            return prev; // Don't update if already true
+          });
+
+          // Auto hide after 2 seconds of no typing events
+          otherTypingTimeoutRef.current = setTimeout(() => {
+            setIsOtherTyping(false);
+          }, 2000);
         }
       })
       .subscribe();
@@ -345,9 +390,9 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const broadcastTyping = () => {
     if (!match) return;
 
-    // Clear previous timeout
+    // Throttle: only broadcast if not already broadcasted recently
     if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
+      return; // Skip if already have an active timeout
     }
 
     // Broadcast typing event
@@ -357,10 +402,128 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       payload: { petId: currentPetId },
     });
 
-    // Stop showing typing after 1 second of no activity
+    // Throttle: prevent sending too many events (max once per 1.5 seconds)
     typingTimeoutRef.current = setTimeout(() => {
-      // This timeout is just for cleanup
-    }, 1000);
+      typingTimeoutRef.current = null;
+    }, 1500);
+  };
+
+  // Call functions
+  const initializeCall = () => {
+    if (match && !webrtcManagerRef.current) {
+      webrtcManagerRef.current = new WebRTCManager(match.matchId);
+
+      webrtcManagerRef.current.onRemoteStream((stream) => {
+        setRemoteStream(stream);
+      });
+
+      webrtcManagerRef.current.onCallEnd(() => {
+        endCall();
+      });
+
+      subscribeToCallSignals();
+    }
+  };
+
+  const subscribeToCallSignals = () => {
+    if (!match) return;
+
+    callChannelRef.current = supabase.channel(`call:${match.matchId}`);
+
+    callChannelRef.current
+      .on("broadcast", { event: "offer" }, async (payload: any) => {
+        if (payload.payload.to === currentPetId) {
+          // Incoming call
+          setIsIncomingCall(true);
+          setCallType(payload.payload.type);
+          setCallStatus("ringing");
+
+          if (!webrtcManagerRef.current) {
+            webrtcManagerRef.current = new WebRTCManager(match.matchId);
+            webrtcManagerRef.current.onRemoteStream((stream) => {
+              setRemoteStream(stream);
+            });
+            webrtcManagerRef.current.onCallEnd(() => {
+              endCall();
+            });
+          }
+
+          await webrtcManagerRef.current.handleOffer(
+            payload.payload.offer,
+            currentPetId,
+          );
+        }
+      })
+      .on("broadcast", { event: "answer" }, async (payload: any) => {
+        if (payload.payload.to === currentPetId) {
+          // Call answered
+          setCallStatus("active");
+        }
+      })
+      .subscribe();
+  };
+
+  const startCall = async (type: CallType) => {
+    if (!match) return;
+
+    try {
+      setCallType(type);
+      setCallStatus("connecting");
+      setIsIncomingCall(false);
+
+      initializeCall();
+
+      const stream = await webrtcManagerRef.current!.startCall(
+        type,
+        match.otherPet.id,
+        currentPetId,
+      );
+      setLocalStream(stream);
+    } catch (error) {
+      console.error("Error starting call:", error);
+      alert("Could not access camera/microphone. Please check permissions.");
+      setCallStatus("idle");
+    }
+  };
+
+  const acceptCall = async () => {
+    if (!match || !callType) return;
+
+    try {
+      const stream = await webrtcManagerRef.current!.acceptCall(callType);
+      setLocalStream(stream);
+      setCallStatus("active");
+
+      await webrtcManagerRef.current!.sendAnswer(
+        match.otherPet.id,
+        currentPetId,
+      );
+    } catch (error) {
+      console.error("Error accepting call:", error);
+      alert("Could not access camera/microphone.");
+      endCall();
+    }
+  };
+
+  const rejectCall = () => {
+    endCall();
+  };
+
+  const endCall = async () => {
+    if (webrtcManagerRef.current) {
+      await webrtcManagerRef.current.endCall();
+      webrtcManagerRef.current = null;
+    }
+
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+      setLocalStream(null);
+    }
+
+    setRemoteStream(null);
+    setCallStatus("idle");
+    setCallType(null);
+    setIsIncomingCall(false);
   };
 
   const handleReaction = async (messageId: string, reaction: string) => {
@@ -640,17 +803,37 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   return (
     <div className="flex-1 flex flex-col bg-white">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-white flex items-center shadow-sm">
-        <Image
-          src={match.otherPet.avatar_url || "https://via.placeholder.com/40"}
-          alt={match.otherPet.name}
-          width={40}
-          height={40}
-          className="rounded-full object-cover max-w-[40px] max-h-[40px]"
-        />
-        <h3 className="ml-3 font-semibold text-gray-900 text-lg">
-          {match.otherPet.name}
-        </h3>
+      <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between shadow-sm">
+        <div className="flex items-center">
+          <Image
+            src={match.otherPet.avatar_url || "https://via.placeholder.com/40"}
+            alt={match.otherPet.name}
+            width={40}
+            height={40}
+            className="rounded-full object-cover max-w-[40px] max-h-[40px]"
+          />
+          <h3 className="ml-3 font-semibold text-gray-900 text-lg">
+            {match.otherPet.name}
+          </h3>
+        </div>
+
+        {/* Call Buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => startCall("audio")}
+            className="p-2.5 rounded-full hover:bg-gray-100 text-gray-700 transition-colors"
+            title="Voice call"
+          >
+            <IoCall size={22} />
+          </button>
+          <button
+            onClick={() => startCall("video")}
+            className="p-2.5 rounded-full hover:bg-gray-100 text-pink-500 transition-colors"
+            title="Video call"
+          >
+            <IoVideocam size={22} />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -837,6 +1020,21 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           </button>
         </div>
       </div>
+
+      {/* Video Call Modal */}
+      <VideoCallModal
+        isOpen={callStatus !== "idle"}
+        callType={callType || "audio"}
+        isIncoming={isIncomingCall}
+        callerName={match.otherPet.name}
+        callerAvatar={match.otherPet.avatar_url}
+        onAccept={acceptCall}
+        onReject={rejectCall}
+        onEnd={endCall}
+        localStream={localStream}
+        remoteStream={remoteStream}
+        callStatus={callStatus}
+      />
     </div>
   );
 }
