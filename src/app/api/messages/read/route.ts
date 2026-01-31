@@ -42,13 +42,31 @@ export async function POST(request: NextRequest) {
 
     const userPetId = pets[0].id;
 
-    // Mark all unread messages from other pet as read
-    const { error: updateError } = await supabase
+    // Tìm tin nhắn cuối cùng của user trong match này
+    const { data: lastUserMessage } = await supabase
+      .from("messages")
+      .select("created_at")
+      .eq("match_id", matchId)
+      .eq("sender_pet_id", userPetId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    // Mark messages from other pet as read
+    // Chỉ đánh dấu tin nhắn SAU tin nhắn cuối cùng của user
+    let updateQuery = supabase
       .from("messages")
       .update({ is_read: true })
       .eq("match_id", matchId)
       .eq("is_read", false)
       .neq("sender_pet_id", userPetId);
+
+    // Nếu user đã từng gửi tin nhắn, chỉ đánh dấu tin nhắn sau đó
+    if (lastUserMessage) {
+      updateQuery = updateQuery.gt("created_at", lastUserMessage.created_at);
+    }
+
+    const { error: updateError } = await updateQuery;
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
-import { vi } from "date-fns/locale";
 
 interface Match {
   matchId: string;
@@ -38,14 +37,14 @@ export default function ConversationList({
   return (
     <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full shadow-lg">
       <div className="p-4 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900">Tin nhắn</h2>
+        <h2 className="text-xl font-bold text-gray-900">Chats</h2>
       </div>
       <div className="flex-1 overflow-y-auto">
         {matches.length === 0 ? (
           <div className="p-4 text-center text-gray-500">
-            <p>Chưa có cuộc trò chuyện nào</p>
+            <p>No conversations yet</p>
             <p className="text-sm mt-2">
-              Hãy match với các thú cưng khác để bắt đầu nhắn tin!
+              Match with other pets to start chatting!
             </p>
           </div>
         ) : (
@@ -88,7 +87,7 @@ export default function ConversationList({
                     <span className="text-xs text-gray-500 ml-2">
                       {formatDistanceToNow(
                         new Date(match.lastMessage.created_at),
-                        { addSuffix: true, locale: vi },
+                        { addSuffix: true },
                       )}
                     </span>
                   )}
@@ -102,15 +101,15 @@ export default function ConversationList({
                 >
                   {match.lastMessage
                     ? match.lastMessage.sender_pet_id === currentPetId
-                      ? // Tin nhắn từ mình
+                      ? // Message from self
                         match.lastMessage.image_url
-                        ? "You: Đã gửi một ảnh"
+                        ? "You: Sent a photo"
                         : `You: ${match.lastMessage.content}`
-                      : // Tin nhắn từ người khác
+                      : // Message from other
                         match.lastMessage.image_url
-                        ? "Đã gửi một ảnh"
+                        ? "Sent a photo"
                         : match.lastMessage.content
-                    : "Bắt đầu trò chuyện"}
+                    : "Start conversation"}
                 </p>
               </div>
             </div>

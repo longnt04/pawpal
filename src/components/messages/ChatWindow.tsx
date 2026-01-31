@@ -59,11 +59,22 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   >({});
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isOtherTyping, setIsOtherTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const messagesChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
+    null,
+  );
+  const reactionsChannelRef = useRef<ReturnType<
+    typeof supabase.channel
+  > | null>(null);
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
+    null,
+  );
   const supabase = createClient();
 
   const MESSAGES_PER_PAGE = 30;
@@ -83,11 +94,25 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       markMessagesAsRead();
       subscribeToMessages();
       subscribeToReactions();
+      subscribeToTyping();
     }
 
     return () => {
-      supabase.channel(`messages:${match?.matchId}`).unsubscribe();
-      supabase.channel(`reactions:${match?.matchId}`).unsubscribe();
+      if (messagesChannelRef.current) {
+        messagesChannelRef.current.unsubscribe();
+        messagesChannelRef.current = null;
+      }
+      if (reactionsChannelRef.current) {
+        reactionsChannelRef.current.unsubscribe();
+        reactionsChannelRef.current = null;
+      }
+      if (typingChannelRef.current) {
+        typingChannelRef.current.unsubscribe();
+        typingChannelRef.current = null;
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [match]);
 
@@ -180,7 +205,7 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const subscribeToMessages = () => {
     if (!match) return;
 
-    const channel = supabase
+    messagesChannelRef.current = supabase
       .channel(`messages:${match.matchId}`)
       .on(
         "postgres_changes",
@@ -253,6 +278,10 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
               }
               return [...filtered, message];
             });
+
+            // Scroll to bottom to show new message
+            setTimeout(scrollToBottom, 100);
+
             // Mark as read if not from current user
             if (data.sender_pet_id !== currentPetId) {
               markMessagesAsRead();
@@ -266,7 +295,7 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const subscribeToReactions = () => {
     if (!match) return;
 
-    const channel = supabase
+    reactionsChannelRef.current = supabase
       .channel(`reactions:${match.matchId}`)
       .on(
         "postgres_changes",
@@ -281,6 +310,44 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         },
       )
       .subscribe();
+  };
+
+  const subscribeToTyping = () => {
+    if (!match) return;
+
+    typingChannelRef.current = supabase.channel(`typing:${match.matchId}`);
+
+    typingChannelRef.current
+      .on("broadcast", { event: "typing" }, (payload) => {
+        // Only show typing if it's from the other person
+        if (payload.payload.petId !== currentPetId) {
+          setIsOtherTyping(true);
+          // Auto hide after 3 seconds
+          setTimeout(() => setIsOtherTyping(false), 3000);
+        }
+      })
+      .subscribe();
+  };
+
+  const broadcastTyping = () => {
+    if (!match) return;
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Broadcast typing event
+    supabase.channel(`typing:${match.matchId}`).send({
+      type: "broadcast",
+      event: "typing",
+      payload: { petId: currentPetId },
+    });
+
+    // Stop showing typing after 1 second of no activity
+    typingTimeoutRef.current = setTimeout(() => {
+      // This timeout is just for cleanup
+    }, 1000);
   };
 
   const handleReaction = async (messageId: string, reaction: string) => {
@@ -693,6 +760,29 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         </div>
       )}
 
+      {/* Typing Indicator */}
+      {isOtherTyping && (
+        <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span>{match?.otherPet.name} is typing</span>
+            <div className="flex gap-1">
+              <span
+                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                style={{ animationDelay: "0ms" }}
+              ></span>
+              <span
+                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                style={{ animationDelay: "150ms" }}
+              ></span>
+              <span
+                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                style={{ animationDelay: "300ms" }}
+              ></span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="p-4 border-t border-gray-200 bg-white shadow-lg">
         <div className="flex items-end gap-2">
@@ -712,7 +802,10 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           <textarea
             ref={textareaRef}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              broadcastTyping();
+            }}
             onKeyPress={handleKeyPress}
             placeholder={
               replyingTo

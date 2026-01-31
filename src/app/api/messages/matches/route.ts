@@ -88,16 +88,39 @@ export async function GET() {
           : false;
 
         // Đếm số tin nhắn chưa đọc từ người kia
-        // Chỉ đếm nếu tin nhắn cuối không phải của mình
+        // Chỉ đếm từ tin nhắn cuối cùng của mình đến tin nhắn mới nhất
         let unreadCount = 0;
         if (lastMessage && lastMessage.sender_pet_id !== userPetId) {
-          const { count } = await supabase
+          // Tìm tin nhắn cuối cùng của user
+          const { data: lastUserMessage } = await supabase
             .from("messages")
-            .select("*", { count: "exact", head: true })
+            .select("created_at")
             .eq("match_id", match.id)
-            .eq("is_read", false)
-            .neq("sender_pet_id", userPetId);
-          unreadCount = count || 0;
+            .eq("sender_pet_id", userPetId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          // Đếm tin nhắn chưa đọc sau tin nhắn cuối của user
+          if (lastUserMessage) {
+            const { count } = await supabase
+              .from("messages")
+              .select("*", { count: "exact", head: true })
+              .eq("match_id", match.id)
+              .eq("is_read", false)
+              .neq("sender_pet_id", userPetId)
+              .gt("created_at", lastUserMessage.created_at);
+            unreadCount = count || 0;
+          } else {
+            // Nếu user chưa gửi tin nhắn nào, đếm tất cả tin nhắn chưa đọc
+            const { count } = await supabase
+              .from("messages")
+              .select("*", { count: "exact", head: true })
+              .eq("match_id", match.id)
+              .eq("is_read", false)
+              .neq("sender_pet_id", userPetId);
+            unreadCount = count || 0;
+          }
         }
 
         return {
