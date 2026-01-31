@@ -71,6 +71,25 @@ export default function MessageBubble({
     }
   });
 
+  const isCallMessage =
+    message.content &&
+    (message.content.includes("Video call") ||
+      message.content.includes("Voice call"));
+
+  // Render call message differently
+  if (isCallMessage) {
+    return (
+      <div className="flex justify-center my-2">
+        <div className="bg-gray-100 text-gray-600 px-4 py-2 rounded-full text-sm flex items-center gap-2">
+          <span>{message.content}</span>
+          <span className="text-xs text-gray-500">
+            {format(new Date(message.created_at), "HH:mm")}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex items-end gap-2 ${showTimestamp ? "mb-4" : "mb-1"} ${

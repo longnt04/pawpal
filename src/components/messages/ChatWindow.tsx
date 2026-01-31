@@ -93,12 +93,16 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const callChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(
     null,
   );
+  const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callStartTimeRef = useRef<number | null>(null);
   const supabase = createClient();
 
   const MESSAGES_PER_PAGE = 30;
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (instant = false) => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: instant ? "auto" : "smooth",
+    });
   };
 
   useEffect(() => {
@@ -113,6 +117,7 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       subscribeToMessages();
       subscribeToReactions();
       subscribeToTyping();
+      subscribeToCallSignals();
     }
 
     return () => {
@@ -137,6 +142,9 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       }
       if (otherTypingTimeoutRef.current) {
         clearTimeout(otherTypingTimeoutRef.current);
+      }
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
       }
       // End any active call
       if (webrtcManagerRef.current) {
@@ -171,10 +179,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     }
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const loadMessages = async (before?: string) => {
     if (!match) return;
 
@@ -195,6 +199,8 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           // Initial load
           setMessages(data.messages);
           setHasMore(data.messages.length === MESSAGES_PER_PAGE);
+          // Scroll instantly to bottom on initial load
+          setTimeout(() => scrollToBottom(true), 100);
         }
       }
     } catch (error) {
@@ -325,8 +331,8 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
               return [...withoutOptimistic, message];
             });
 
-            // Scroll to bottom to show new message
-            setTimeout(scrollToBottom, 100);
+            // Scroll to bottom to show new message (smooth)
+            setTimeout(() => scrollToBottom(false), 100);
 
             // Mark as read if not from current user
             if (data.sender_pet_id !== currentPetId) {
@@ -458,6 +464,15 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         if (payload.payload.to === currentPetId) {
           // Call answered
           setCallStatus("active");
+
+          // Clear timeout when call is answered
+          if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+          }
+
+          // Record call start time
+          callStartTimeRef.current = Date.now();
         }
       })
       .subscribe();
@@ -479,6 +494,14 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         currentPetId,
       );
       setLocalStream(stream);
+
+      // Set timeout: auto-end call after 60 seconds if not answered
+      callTimeoutRef.current = setTimeout(() => {
+        if (callStatus !== "active") {
+          alert("Call not answered");
+          endCall(false); // Don't save to history if not answered
+        }
+      }, 60000); // 60 seconds
     } catch (error) {
       console.error("Error starting call:", error);
       alert("Could not access camera/microphone. Please check permissions.");
@@ -494,6 +517,15 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       setLocalStream(stream);
       setCallStatus("active");
 
+      // Clear timeout when call is answered
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
+
+      // Record call start time
+      callStartTimeRef.current = Date.now();
+
       await webrtcManagerRef.current!.sendAnswer(
         match.otherPet.id,
         currentPetId,
@@ -501,15 +533,44 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     } catch (error) {
       console.error("Error accepting call:", error);
       alert("Could not access camera/microphone.");
-      endCall();
+      endCall(false);
     }
   };
 
   const rejectCall = () => {
-    endCall();
+    endCall(false);
   };
 
-  const endCall = async () => {
+  const endCall = async (saveHistory = true) => {
+    // Calculate call duration if call was active
+    let duration = 0;
+    if (callStartTimeRef.current && saveHistory) {
+      duration = Math.floor((Date.now() - callStartTimeRef.current) / 1000); // in seconds
+
+      // Save call history to messages
+      if (match && callType && duration > 0) {
+        try {
+          await fetch("/api/messages/call-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              matchId: match.matchId,
+              callType,
+              duration,
+            }),
+          });
+        } catch (error) {
+          console.error("Error saving call history:", error);
+        }
+      }
+    }
+
+    // Clear timeout
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
+
     if (webrtcManagerRef.current) {
       await webrtcManagerRef.current.endCall();
       webrtcManagerRef.current = null;
@@ -524,6 +585,7 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     setCallStatus("idle");
     setCallType(null);
     setIsIncomingCall(false);
+    callStartTimeRef.current = null;
   };
 
   const handleReaction = async (messageId: string, reaction: string) => {
