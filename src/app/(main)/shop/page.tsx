@@ -29,7 +29,6 @@ export default function ShopPage() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
 
-
   const totalPages = Math.ceil(totalProducts / PAGE_SIZE);
 
   useEffect(() => {
@@ -71,7 +70,6 @@ export default function ShopPage() {
     setLoading(false);
   };
 
-
   const addToCart = async (productId: string) => {
     const {
       data: { user },
@@ -94,7 +92,6 @@ export default function ShopPage() {
     fetchProducts(1);
   }, [search, minPrice, maxPrice]);
 
-
   return (
     <div className="min-h-screen bg-gray-900 px-6 py-12">
       <h1 className="text-4xl font-bold mb-10 text-center bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
@@ -114,7 +111,9 @@ export default function ShopPage() {
           />
 
           <div>
-            <h2 className="text-xl font-bold text-white mt-6 mb-2">Khoảng giá</h2>
+            <h2 className="text-xl font-bold text-white mt-6 mb-2">
+              Khoảng giá
+            </h2>
 
             <div className="space-y-3">
               <input
@@ -143,18 +142,16 @@ export default function ShopPage() {
             }}
             className="w-full mt-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 font-semibold"
           >
-            Reset bộ lọc
+            Làm mới bộ lọc
           </button>
         </div>
 
         {/* Product List */}
         <div className="md:col-span-3">
-
           {loading ? (
             <p className="text-center text-gray-400">Đang tải sản phẩm...</p>
           ) : (
             <>
-
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
                 {products.map((p) => (
                   <Link key={p.id} href={`/shop/${p.id}`} className="block">
@@ -171,7 +168,9 @@ export default function ShopPage() {
                       />
 
                       <div className="p-4">
-                        <h2 className="text-lg font-semibold text-white">{p.name}</h2>
+                        <h2 className="text-lg font-semibold text-white">
+                          {p.name}
+                        </h2>
                         <p className="text-sm text-gray-400 line-clamp-2">
                           {p.description}
                         </p>
@@ -194,7 +193,6 @@ export default function ShopPage() {
                 ))}
               </div>
 
-
               {/* Pagination */}
               <div className="flex justify-center mt-12 gap-2">
                 <button
@@ -209,10 +207,11 @@ export default function ShopPage() {
                   <button
                     key={i}
                     onClick={() => setPage(i + 1)}
-                    className={`px-4 py-2 rounded-lg ${page === i + 1
-                      ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white"
-                      : "bg-gray-800 text-gray-300"
-                      }`}
+                    className={`px-4 py-2 rounded-lg ${
+                      page === i + 1
+                        ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white"
+                        : "bg-gray-800 text-gray-300"
+                    }`}
                   >
                     {i + 1}
                   </button>

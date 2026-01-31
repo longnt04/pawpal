@@ -15,6 +15,7 @@ export default function CartPage() {
 
   useEffect(() => {
     fetchCart();
+    fetchUserInfo(); // 👈 thêm dòng này
   }, []);
 
   const fetchCart = async () => {
@@ -29,6 +30,25 @@ export default function CartPage() {
       .eq("user_id", user.id);
 
     setItems(data || []);
+  };
+
+  const fetchUserInfo = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("address, phone")
+      .eq("id", user.id)
+      .single();
+
+    if (!error && data) {
+      setAddress(data.address || "");
+      setPhone(data.phone || "");
+    }
   };
 
   const updateQuantity = async (id: string, quantity: number) => {
@@ -79,6 +99,20 @@ export default function CartPage() {
       const price = priceMap[productId] ?? 0;
       return sum + price * item.quantity;
     }, 0);
+
+    if (!address.trim()) {
+      return toast.error("Vui lòng nhập địa chỉ giao hàng");
+    }
+
+    if (!phone.trim()) {
+      return toast.error("Vui lòng nhập số điện thoại");
+    }
+
+    // regex kiểm tra SĐT Việt Nam cơ bản
+    const phoneRegex = /^(0|\+84)[0-9]{9}$/;
+    if (!phoneRegex.test(phone)) {
+      return toast.error("Số điện thoại không hợp lệ");
+    }
 
     // COD → tạo đơn hàng trực tiếp
     if (paymentMethod === "cod") {

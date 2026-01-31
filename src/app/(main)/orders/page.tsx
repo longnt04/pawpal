@@ -240,27 +240,29 @@ export default function OrdersPage() {
         </div>
       )}
       {/* Pagination */}
-      <div className="flex justify-center items-center gap-4 mt-8">
-        <button
-          onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          disabled={page === 1}
-          className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-40"
-        >
-          ← Trang trước
-        </button>
+      {orders.length > 0 && (
+        <div className="flex justify-center items-center gap-4 mt-8">
+          <button
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            disabled={page === 1}
+            className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-40"
+          >
+            ← Trang trước
+          </button>
 
-        <span className="text-gray-300">
-          Trang {page} / {totalPages || 1}
-        </span>
+          <span className="text-gray-300">
+            Trang {page} / {totalPages || 1}
+          </span>
 
-        <button
-          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-          disabled={page === totalPages}
-          className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-40"
-        >
-          Trang sau →
-        </button>
-      </div>
+          <button
+            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+            disabled={page === totalPages}
+            className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-40"
+          >
+            Trang sau →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
