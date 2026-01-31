@@ -192,7 +192,7 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 px-6 py-12 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 px-6 py-12">
       <h1 className="text-4xl font-bold mb-10 bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
         🛒 Giỏ hàng của bạn
       </h1>
@@ -201,13 +201,13 @@ export default function CartPage() {
         {/* Danh sách sản phẩm */}
         <div className="lg:col-span-2 space-y-6">
           {items.length === 0 && (
-            <p className="text-gray-400">Giỏ hàng đang trống...</p>
+            <p className="text-gray-600">Giỏ hàng đang trống...</p>
           )}
 
           {items.map((item) => (
             <div
               key={item.id}
-              className="flex gap-4 bg-gray-800 p-4 rounded-2xl items-center"
+              className="flex gap-4 bg-white p-4 rounded-2xl items-center shadow-lg"
             >
               <Image
                 src={item.products.images?.[0] || "/no-image.png"}
@@ -218,7 +218,9 @@ export default function CartPage() {
               />
 
               <div className="flex-1">
-                <h2 className="font-semibold">{item.products.name}</h2>
+                <h2 className="font-semibold text-gray-900">
+                  {item.products.name}
+                </h2>
                 <p className="text-pink-400 font-bold">
                   {item.products.price.toLocaleString()}₫
                 </p>
@@ -227,14 +229,14 @@ export default function CartPage() {
                 <div className="flex items-center gap-3 mt-2">
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="px-2 py-1 bg-gray-700 rounded"
+                    className="px-2 py-1 bg-gray-200 text-gray-900 rounded hover:bg-gray-300"
                   >
                     −
                   </button>
-                  <span>{item.quantity}</span>
+                  <span className="text-gray-900">{item.quantity}</span>
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="px-2 py-1 bg-gray-700 rounded"
+                    className="px-2 py-1 bg-gray-200 text-gray-900 rounded hover:bg-gray-300"
                   >
                     +
                   </button>
@@ -249,34 +251,36 @@ export default function CartPage() {
         </div>
 
         {/* Thanh toán */}
-        <div className="bg-gray-800 p-6 rounded-2xl h-fit">
-          <h2 className="text-xl font-semibold mb-4">Thanh toán</h2>
+        <div className="bg-white p-6 rounded-2xl shadow-lg h-fit">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Thanh toán
+          </h2>
 
           <div className="space-y-4 mb-6">
             <div>
-              <label className="text-sm text-gray-300">Địa chỉ giao hàng</label>
+              <label className="text-sm text-gray-700">Địa chỉ giao hàng</label>
               <textarea
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full mt-1 p-3 rounded-lg bg-gray-700 text-white outline-none"
+                className="w-full mt-1 p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-900 outline-none focus:ring-2 focus:ring-pink-400"
                 placeholder="Nhập địa chỉ nhận hàng..."
               />
             </div>
 
             <div>
-              <label className="text-sm text-gray-300">Số điện thoại</label>
+              <label className="text-sm text-gray-700">Số điện thoại</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full mt-1 p-3 rounded-lg bg-gray-700 text-white outline-none"
+                className="w-full mt-1 p-3 rounded-lg bg-gray-100 border border-gray-200 text-gray-900 outline-none focus:ring-2 focus:ring-pink-400"
                 placeholder="Nhập số điện thoại..."
               />
             </div>
           </div>
 
           <div className="space-y-3 mb-6">
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-gray-900">
               <input
                 type="radio"
                 value="cod"
@@ -286,7 +290,7 @@ export default function CartPage() {
               Thanh toán khi nhận hàng (COD)
             </label>
 
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-gray-900">
               <input
                 type="radio"
                 value="bank"
@@ -297,7 +301,7 @@ export default function CartPage() {
             </label>
           </div>
 
-          <div className="flex justify-between text-lg font-semibold mb-6">
+          <div className="flex justify-between text-lg font-semibold mb-6 text-gray-900">
             <span>Tổng tiền:</span>
             <span className="text-pink-400">{total.toLocaleString()}₫</span>
           </div>

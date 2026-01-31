@@ -67,12 +67,12 @@ export function SuccessPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-      <div className="bg-gray-800 p-10 rounded-2xl text-center shadow-xl">
-        <h1 className="text-3xl font-bold text-green-400 mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="bg-white p-10 rounded-2xl text-center shadow-xl">
+        <h1 className="text-3xl font-bold text-green-500 mb-4">
           Thanh toán thành công!
         </h1>
-        <p className="text-gray-300 mb-2">
+        <p className="text-gray-700 mb-2">
           Đơn hàng của bạn đang được xử lý 🐾
         </p>
         <p className="text-sm text-gray-500">

@@ -174,10 +174,10 @@ export default function MessagesPage() {
 
   if (isLoading) {
     return (
-      <div className="h-[calc(100vh-64px)] bg-gray-900 flex items-center justify-center">
+      <div className="h-[calc(100vh-64px)] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto"></div>
-          <p className="text-gray-400 mt-4">Đang tải...</p>
+          <p className="text-gray-600 mt-4">Loading...</p>
         </div>
       </div>
     );
@@ -185,13 +185,13 @@ export default function MessagesPage() {
 
   if (matches.length === 0) {
     return (
-      <div className="h-[calc(100vh-64px)] bg-gray-900 flex items-center justify-center">
+      <div className="h-[calc(100vh-64px)] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <IoChatbubbles className="text-8xl mb-6 mx-auto text-pink-500" />
-          <h1 className="text-3xl font-bold text-white mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Chưa có cuộc trò chuyện
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-600 text-lg">
             Hãy match với các thú cưng khác để bắt đầu nhắn tin!
           </p>
         </div>
@@ -200,7 +200,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-gray-900 flex">
+    <div className="h-[calc(100vh-64px)] bg-gradient-to-br from-gray-50 to-gray-100 flex">
       <ConversationList
         matches={matches}
         selectedMatchId={selectedMatchId}

@@ -49,9 +49,9 @@ export default function TopBar() {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast.error("Lỗi khi đăng xuất");
+      toast.error("Logout error");
     } else {
-      toast.success("Đã đăng xuất");
+      toast.success("Logged out successfully");
       router.push("/login");
     }
   };
@@ -63,11 +63,10 @@ export default function TopBar() {
     { name: "Messages", path: "/messages", icon: IoChatbubbles },
     { name: "Cart", path: "/cart", icon: IoCart },
     { name: "Orders", path: "/orders", icon: IoReceipt },
-
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -75,7 +74,6 @@ export default function TopBar() {
             href="/"
             className="flex flex-row items-center space-x-2 text-2xl font-bold"
           >
-            
             <span className="bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
               🐾 PawPals
             </span>
@@ -92,8 +90,8 @@ export default function TopBar() {
                   href={item.path}
                   className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
                     isActive
-                      ? "bg-gray-500"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-pink-100 text-pink-600"
+                      : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
                   <IconComponent className="text-xl" />
@@ -132,7 +130,7 @@ export default function TopBar() {
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
                 >
-                  <IoLogOut /> Đăng xuất
+                  <IoLogOut /> Logout
                 </button>
               </div>
             </div>

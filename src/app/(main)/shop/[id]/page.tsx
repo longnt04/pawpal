@@ -57,7 +57,7 @@ export default function ProductDetailPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return toast.error("Vui lòng đăng nhập");
+    if (!user) return toast.error("Please log in");
 
     const { error } = await supabase.from("cart_items").insert({
       user_id: user.id,
@@ -65,18 +65,17 @@ export default function ProductDetailPage() {
       quantity,
     });
 
-    if (error) toast.error("Không thể thêm vào giỏ");
-    else toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ 🐾`);
+    if (error) toast.error("Cannot add to cart");
+    else toast.success(`Added ${quantity} items to cart 🐾`);
   };
 
   if (!product)
-    return <p className="text-center text-gray-400 mt-20">Đang tải...</p>;
-
+    return <p className="text-center text-gray-600 mt-20">Loading...</p>;
   return (
-    <div className="min-h-screen bg-gray-900 text-white px-6 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 px-6 py-12">
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10">
         {/* Ảnh sản phẩm */}
-        <div className="bg-gray-800 rounded-2xl p-4">
+        <div className="bg-white rounded-2xl p-4 shadow-lg">
           <Image
             src={product.images?.[0] || "/no-image.png"}
             alt={product.name}
@@ -89,7 +88,7 @@ export default function ProductDetailPage() {
         {/* Thông tin */}
         <div>
           <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
-          <p className="text-gray-400 mb-6">{product.description}</p>
+          <p className="text-gray-600 mb-6">{product.description}</p>
 
           <p className="text-2xl font-bold text-pink-400 mb-6">
             {product.price.toLocaleString()}₫
@@ -98,7 +97,7 @@ export default function ProductDetailPage() {
           {/* Chọn số lượng */}
           <div className="flex items-center gap-4 mb-6">
             <span>Số lượng:</span>
-            <div className="flex items-center bg-gray-800 rounded-lg">
+            <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 className="px-3 py-1 text-lg"
@@ -115,8 +114,8 @@ export default function ProductDetailPage() {
                 +
               </button>
             </div>
-            <span className="text-sm text-gray-500">
-              Còn {product.stock} sản phẩm
+            <span className="text-sm text-gray-600">
+              {product.stock} items left
             </span>
           </div>
 
@@ -125,24 +124,22 @@ export default function ProductDetailPage() {
             className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90"
           >
             <ShoppingCart size={20} />
-            Thêm vào giỏ hàng
+            Add to cart
           </button>
         </div>
       </div>
 
-      {/* Sản phẩm liên quan */}
+      {/* Related Products */}
       {related.length > 0 && (
         <div className="mt-16 max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6">
-            🐾 Sản phẩm liên quan
-          </h2>
+          <h2 className="text-2xl font-bold mb-6">🐾 Related Products</h2>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {related.map((item) => (
               <Link
                 key={item.id}
                 href={`/shop/${item.id}`}
-                className="bg-gray-800 rounded-2xl overflow-hidden hover:scale-[1.02] transition"
+                className="bg-white rounded-2xl overflow-hidden hover:scale-[1.02] transition shadow-lg"
               >
                 <Image
                   src={item.images?.[0] || "/no-image.png"}
@@ -152,7 +149,7 @@ export default function ProductDetailPage() {
                   className="w-full h-40 object-cover"
                 />
                 <div className="p-4">
-                  <h3 className="text-white font-semibold">{item.name}</h3>
+                  <h3 className="text-gray-900 font-semibold">{item.name}</h3>
                   <p className="text-pink-400 font-bold mt-2">
                     {item.price.toLocaleString()}₫
                   </p>

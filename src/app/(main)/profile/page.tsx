@@ -327,18 +327,18 @@ export default function ProfilePage() {
 
   if (loading && !user) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-400">Đang tải...</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-20">
       <div className="max-w-4xl mx-auto p-6">
         {/* User Profile Section */}
         <div className="card-swipe mb-6 p-4">
-          <h2 className="text-2xl font-bold bg-clip-text text-white mb-6">
+          <h2 className="text-2xl font-bold bg-clip-text text-gray-900 mb-6">
             Thông tin cá nhân
           </h2>
 
@@ -385,55 +385,55 @@ export default function ProfilePage() {
             {/* Info */}
             <div className="flex-1 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Họ và tên
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 focus:border-pink-400 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Số điện thoại
                 </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 focus:border-pink-400 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Địa chỉ
                 </label>
                 <textarea
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 focus:border-pink-400 outline-none"
                   placeholder="Nhập địa chỉ của bạn..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email
                 </label>
                 <input
                   type="email"
                   value={user?.email || ""}
                   disabled
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-gray-200 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed"
                 />
               </div>
               <button
                 onClick={handleUpdateProfile}
                 disabled={loading}
-                className="flex items-center gap-2 px-6 py-2  text-white rounded-lg hover:from-pink-600 hover:to-purple-700 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:from-pink-600 hover:to-purple-700 disabled:opacity-50"
               >
                 <IoSave /> Lưu thay đổi
               </button>
@@ -468,8 +468,8 @@ export default function ProfilePage() {
 
           {/* Add New Pet Form */}
           {addingPet && (
-            <div className="mb-6 p-4 bg-gray-800 rounded-xl border-2 border-pink-500">
-              <h3 className="text-lg font-semibold text-gray-200 mb-4">
+            <div className="mb-6 p-4 bg-white rounded-xl border-2 border-pink-500 shadow-lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Thêm thú cưng mới
               </h3>
 
@@ -492,8 +492,8 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 ) : (
-                  <label className="w-32 h-32 rounded-full bg-gray-700 border-2 border-dashed border-gray-500 flex items-center justify-center cursor-pointer hover:bg-gray-600">
-                    <IoImageOutline className="text-3xl text-gray-400" />
+                  <label className="w-32 h-32 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200">
+                    <IoImageOutline className="text-3xl text-gray-500" />
                     <input
                       type="file"
                       accept="image/*"
@@ -506,7 +506,7 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm text-gray-300 mb-1">
+                  <label className="block text-sm text-gray-700 mb-1">
                     Tên
                   </label>
                   <input
@@ -515,11 +515,11 @@ export default function ProfilePage() {
                     onChange={(e) =>
                       setNewPet({ ...newPet, name: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-300 mb-1">
+                  <label className="block text-sm text-gray-700 mb-1">
                     Giống
                   </label>
                   <input
@@ -528,7 +528,7 @@ export default function ProfilePage() {
                     onChange={(e) =>
                       setNewPet({ ...newPet, breed: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -549,7 +549,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-300 mb-1">
+                  <label className="block text-sm text-gray-700 mb-1">
                     Loài
                   </label>
                   <select
@@ -557,7 +557,7 @@ export default function ProfilePage() {
                     onChange={(e) =>
                       setNewPet({ ...newPet, species: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                   >
                     <option value="dog">Chó</option>
                     <option value="cat">Mèo</option>
@@ -586,7 +586,7 @@ export default function ProfilePage() {
                       imagePreview: "",
                     });
                   }}
-                  className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+                  className="px-4 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300"
                 >
                   Hủy
                 </button>
@@ -597,7 +597,10 @@ export default function ProfilePage() {
           {/* Pets List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pets.map((pet) => (
-              <div key={pet.id} className="p-4 bg-gray-800 rounded-xl relative">
+              <div
+                key={pet.id}
+                className="p-4 bg-white rounded-xl shadow-lg relative"
+              >
                 {editingPet === pet.id && editPetData ? (
                   // Edit Mode
                   <>
@@ -620,8 +623,8 @@ export default function ProfilePage() {
                           </label>
                         </div>
                       ) : (
-                        <label className="w-32 h-32 rounded-full bg-gray-700 border-2 border-dashed border-gray-500 flex items-center justify-center cursor-pointer hover:bg-gray-600">
-                          <IoImageOutline className="text-3xl text-gray-400" />
+                        <label className="w-32 h-32 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200">
+                          <IoImageOutline className="text-3xl text-gray-500" />
                           <input
                             type="file"
                             accept="image/*"
@@ -634,7 +637,7 @@ export default function ProfilePage() {
 
                     <div className="space-y-2">
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1">
+                        <label className="block text-xs text-gray-600 mb-1">
                           Tên
                         </label>
                         <input
@@ -646,11 +649,11 @@ export default function ProfilePage() {
                               name: e.target.value,
                             })
                           }
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                          className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1">
+                        <label className="block text-xs text-gray-600 mb-1">
                           Giống
                         </label>
                         <input
@@ -662,12 +665,12 @@ export default function ProfilePage() {
                               breed: e.target.value,
                             })
                           }
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                          className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs text-gray-400 mb-1">
+                          <label className="block text-xs text-gray-600 mb-1">
                             Tuổi
                           </label>
                           <input
@@ -680,11 +683,11 @@ export default function ProfilePage() {
                               })
                             }
                             min="0"
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                            className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-400 mb-1">
+                          <label className="block text-xs text-gray-600 mb-1">
                             Loài
                           </label>
                           <select
@@ -695,7 +698,7 @@ export default function ProfilePage() {
                                 species: e.target.value,
                               })
                             }
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                            className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                           >
                             <option value="dog">Chó</option>
                             <option value="cat">Mèo</option>
@@ -715,7 +718,7 @@ export default function ProfilePage() {
                       </button>
                       <button
                         onClick={handleCancelEditPet}
-                        className="flex-1 px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-sm"
+                        className="flex-1 px-3 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 text-sm"
                       >
                         Hủy
                       </button>
@@ -731,10 +734,10 @@ export default function ProfilePage() {
                         className="w-32 h-32 object-cover rounded-full"
                       />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-200">
+                    <h3 className="text-lg font-bold text-gray-900">
                       {pet.name}
                     </h3>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-600">
                       {pet.breed} • {pet.age} tuổi •{" "}
                       {pet.species === "dog"
                         ? "Chó"
@@ -756,7 +759,7 @@ export default function ProfilePage() {
                         className={`px-3 py-1 rounded-lg text-sm ${
                           pet.is_active
                             ? "bg-green-500 hover:bg-green-600"
-                            : "bg-gray-600 hover:bg-gray-500"
+                            : "bg-gray-400 hover:bg-gray-500"
                         } text-white`}
                       >
                         {pet.is_active ? "Đang hoạt động" : "Đã ẩn"}
@@ -775,7 +778,7 @@ export default function ProfilePage() {
           </div>
 
           {pets.length === 0 && !addingPet && (
-            <p className="text-center text-gray-400 py-8">
+            <p className="text-center text-gray-600 py-8">
               Chưa có thú cưng nào
             </p>
           )}

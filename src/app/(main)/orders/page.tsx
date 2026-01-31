@@ -138,26 +138,19 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 px-6 py-12 text-white">
-      <h1 className="text-4xl font-bold mb-10 bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-        📦 Lịch sử mua hàng
-      </h1>
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 px-6 py-12">
       {loading ? (
-        <p className="text-gray-400">Đang tải đơn hàng...</p>
+        <p className="text-gray-600">Loading orders...</p>
       ) : orders.length === 0 ? (
-        <p className="text-gray-400">Bạn chưa có đơn hàng nào</p>
+        <p className="text-gray-600">You have no orders</p>
       ) : (
         <div className="space-y-8">
           {orders.map((order) => (
-            <div
-              key={order.id}
-              className="bg-gray-800 rounded-2xl p-6 shadow-lg"
-            >
+            <div key={order.id} className="bg-white rounded-2xl p-6 shadow-lg">
               {/* Header */}
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-600">
                     Mã đơn: {order.id.slice(0, 8)}
                   </p>
                   <p className="text-sm text-gray-500">
@@ -170,12 +163,12 @@ export default function OrdersPage() {
                     <p
                       className={`font-semibold ${getShippingStatus(order.status)}`}
                     >
-                      🚚 {order.status.toUpperCase()}
+                       {order.status.toUpperCase()}
                     </p>
                     <p
                       className={`text-sm ${getPaymentStatus(order.payment_status)}`}
                     >
-                      💳 {order.payment_status.toUpperCase()}
+                       {order.payment_status.toUpperCase()}
                     </p>
                     <p className="text-pink-400 font-bold text-lg">
                       {(order.total_price ?? 0).toLocaleString()}₫
@@ -194,8 +187,8 @@ export default function OrdersPage() {
 
               {/* Thông tin giao hàng */}
               <div className="mb-4 border-t border-gray-700 pt-4 text-sm text-gray-300 space-y-1">
-                <p>📞 SĐT: {order.phone}</p>
-                <p>📍 Địa chỉ: {order.shipping_address}</p>
+                <p> SĐT: {order.phone}</p>
+                <p> Địa chỉ: {order.shipping_address}</p>
               </div>
 
               {/* Chi tiết sản phẩm (accordion) */}

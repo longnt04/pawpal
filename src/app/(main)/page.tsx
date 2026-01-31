@@ -72,7 +72,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <CreatePostModal
         isOpen={showCreatePost}
         onClose={() => setShowCreatePost(false)}
@@ -83,17 +83,17 @@ export default function HomePage() {
         {/* Nút tạo bài đăng */}
         <div className="mb-6">
           {loading ? (
-            <div className="w-full lg:max-w-2xl mx-auto bg-gray-800 rounded-xl shadow p-4">
+            <div className="w-full lg:max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-4">
               <div className="animate-pulse">
-                <div className="h-6 bg-gray-700 rounded w-1/2"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
               </div>
             </div>
           ) : (
             <button
               onClick={() => setShowCreatePost(true)}
-              className="w-full lg:max-w-2xl mx-auto flex items-center gap-3 bg-gray-800 rounded-xl shadow p-4 hover:shadow-md transition"
+              className="w-full lg:max-w-2xl mx-auto flex items-center gap-3 bg-white rounded-xl shadow-lg p-4 hover:shadow-xl transition"
             >
-              <span className="text-gray-500 dark:text-gray-400 text-left flex-1">
+              <span className="text-gray-500 text-left flex-1">
                 Chia sẻ khoảnh khắc của thú cưng...
               </span>
             </button>
@@ -104,19 +104,19 @@ export default function HomePage() {
           {/* Cột giữa - Feed bài đăng */}
           <div className="lg:max-w-2xl mx-auto">
             {loading ? (
-              <div className="bg-gray-800 rounded-xl shadow p-8 text-center">
+              <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <div className="animate-pulse">
-                  <div className="h-8 bg-gray-700 rounded w-3/4 mx-auto mb-4"></div>
-                  <div className="h-4 bg-gray-700 rounded w-1/2 mx-auto"></div>
+                  <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
                 </div>
               </div>
             ) : posts.length === 0 ? (
-              <div className="bg-gray-800 rounded-xl shadow p-8 text-center">
+              <div className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <span className="text-6xl mb-4 block">📝</span>
-                <h3 className="text-xl font-bold text-gray-200 mb-2">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
                   Chưa có bài đăng nào
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-gray-600">
                   Hãy là người đầu tiên chia sẻ về thú cưng của bạn!
                 </p>
               </div>

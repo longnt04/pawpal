@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { matchId, content, imageUrl } = body;
+    const { matchId, content, imageUrl, replyToMessageId } = body;
 
     if (!matchId) {
       return NextResponse.json(
@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
         sender_pet_id: userPetId,
         content: content || null,
         image_url: imageUrl || null,
+        reply_to_message_id: replyToMessageId || null,
         is_read: false,
       })
       .select(
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
         content,
         image_url,
         sender_pet_id,
+        reply_to_message_id,
         is_read,
         created_at,
         sender:pets!messages_sender_pet_id_fkey(id, name, avatar_url)

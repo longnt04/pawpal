@@ -87,19 +87,24 @@ export async function GET() {
             5 * 60 * 1000
           : false;
 
-        // Đếm số tin nhắn chưa đọc
-        const { count: unreadCount } = await supabase
-          .from("messages")
-          .select("*", { count: "exact", head: true })
-          .eq("match_id", match.id)
-          .eq("is_read", false)
-          .neq("sender_pet_id", userPetId);
+        // Đếm số tin nhắn chưa đọc từ người kia
+        // Chỉ đếm nếu tin nhắn cuối không phải của mình
+        let unreadCount = 0;
+        if (lastMessage && lastMessage.sender_pet_id !== userPetId) {
+          const { count } = await supabase
+            .from("messages")
+            .select("*", { count: "exact", head: true })
+            .eq("match_id", match.id)
+            .eq("is_read", false)
+            .neq("sender_pet_id", userPetId);
+          unreadCount = count || 0;
+        }
 
         return {
           matchId: match.id,
           otherPet,
           lastMessage,
-          unreadCount: unreadCount || 0,
+          unreadCount: unreadCount,
           createdAt: match.created_at,
         };
       }),

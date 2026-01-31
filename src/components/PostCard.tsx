@@ -275,21 +275,21 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
     const diffHours = Math.floor(diffMs / 3600000);
 
     if (diffMins < 60) {
-      return `${diffMins} phút trước`;
+      return `${diffMins} minutes ago`;
     } else if (diffHours < 24) {
-      return `${diffHours} giờ trước`;
+      return `${diffHours} hours ago`;
     } else {
       const diffDays = Math.floor(diffHours / 24);
-      return `${diffDays} ngày trước`;
+      return `${diffDays} days ago`;
     }
   };
 
   console.log(comments);
 
   return (
-    <div className="card-swipe mb-6">
+    <div className="mb-6 bg-white rounded-xl shadow-lg overflow-hidden">
       {/* Pet Info Header */}
-      <div className="p-4 flex items-center gap-3 border-b border-gray-700">
+      <div className="p-4 flex items-center gap-3 border-b border-gray-200">
         <div className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold overflow-hidden">
           {pet?.avatar_url ? (
             <img
@@ -302,15 +302,15 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
           )}
         </div>
         <div className="flex-1">
-          <h3 className="font-bold text-gray-200">{pet?.name || "Pet"}</h3>
-          <p className="text-sm text-gray-400">{getTimeAgo(post.created_at)}</p>
+          <h3 className="font-bold text-gray-900">{pet?.name || "Pet"}</h3>
+          <p className="text-sm text-gray-600">{getTimeAgo(post.created_at)}</p>
         </div>
       </div>
 
       {/* Content */}
       {post.content && (
         <div className="p-4">
-          <p className="text-gray-300 whitespace-pre-wrap">{post.content}</p>
+          <p className="text-gray-800 whitespace-pre-wrap">{post.content}</p>
         </div>
       )}
 
@@ -326,7 +326,7 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
       )}
 
       {/* Interaction Summary */}
-      <div className="px-4 py-2 flex items-center gap-4 text-sm text-gray-400">
+      <div className="px-4 py-2 flex items-center gap-4 text-sm text-gray-600">
         <span>{likeCount} Likes</span>
         <span>·</span>
         <span>{commentCount} Comments</span>
@@ -339,30 +339,30 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
       </div>
 
       {/* Action Buttons */}
-      <div className="px-4 py-3 border-t border-b border-gray-700 flex items-center gap-6">
+      <div className="px-4 py-3 border-t border-b border-gray-200 flex items-center gap-6">
         <button
           onClick={handleLike}
-          className={`flex items-center gap-2 transition hover:bg-gray-800 ${
-            isLiked ? "text-pink-500" : "text-gray-400"
+          className={`flex items-center gap-2 transition hover:bg-pink-50 px-3 py-1 rounded-lg ${
+            isLiked ? "text-pink-500" : "text-gray-600"
           }`}
         >
           <IoHeart className={`text-xl ${isLiked ? "fill-current" : ""}`} />
           <span className="text-sm font-medium">
-            {isLiked ? "Đã thích" : "Thích"}
+            {isLiked ? "Liked" : "Like"}
           </span>
         </button>
         <button
           onClick={() =>
             document.getElementById(`comment-input-${post.id}`)?.focus()
           }
-          className="flex items-center gap-2 text-gray-400  transition"
+          className="flex items-center gap-2 text-gray-600 hover:bg-gray-100 px-3 py-1 rounded-lg transition"
         >
           <IoChatbubbles className="text-xl" />
-          <span className="text-sm font-medium">Bình luận</span>
+          <span className="text-sm font-medium">Comment</span>
         </button>
-        <button className="flex items-center gap-2 text-gray-400 transition">
+        <button className="flex items-center gap-2 text-gray-600 hover:bg-gray-100 px-3 py-1 rounded-lg transition">
           <IoShareSocial className="text-xl" />
-          <span className="text-sm font-medium">Chia sẻ</span>
+          <span className="text-sm font-medium">Share</span>
         </button>
       </div>
 
@@ -390,11 +390,11 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="bg-gray-800 rounded-lg pr-3 py-2">
-                      <p className="font-semibold text-sm text-gray-200">
+                    <div className="bg-gray-100 rounded-lg pr-3 py-2">
+                      <p className="font-semibold text-sm text-gray-900">
                         {comment.users?.full_name || "User"}
                       </p>
-                      <p className="text-sm text-gray-300">{comment.content}</p>
+                      <p className="text-sm text-gray-700">{comment.content}</p>
                     </div>
                     <div className="flex items-center gap-3 mt-1 ml-3 text-xs text-gray-500">
                       <span>{getTimeAgo(comment.created_at)}</span>
@@ -406,7 +406,7 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
                         }
                         className="hover:text-gray-400 font-medium"
                       >
-                        Trả lời
+                        Reply
                       </button>
                     </div>
 
@@ -439,7 +439,7 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
 
                     {/* Replies
                     {comment.replies && comment.replies.length > 0 && (
-                      <div className="mt-3 space-y-2 ml-4 border-l-2 border-gray-700 pl-3">
+                      <div className="mt-3 space-y-2 ml-4 border-l-2 border-gray-200 pl-3">>
                         {comment.replies.map((reply) => (
                           <div key={reply.id} className="flex gap-2">
                             <div className="w-6 h-6 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
@@ -450,11 +450,11 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
                               )}
                             </div>
                             <div className="flex-1">
-                              <div className="bg-gray-800 rounded-lg px-2 py-1.5">
-                                <p className="font-semibold text-xs text-gray-200">
+                              <div className="bg-gray-100 rounded-lg px-2 py-1.5">
+                                <p className="font-semibold text-xs text-gray-900">
                                   {reply.users?.full_name || "User"}
                                 </p>
-                                <p className="text-xs text-gray-300">{reply.content}</p>
+                                <p className="text-xs text-gray-700">{reply.content}</p>
                               </div>
                               <p className="text-xs text-gray-500 mt-0.5 ml-2">
                                 {getTimeAgo(reply.created_at)}
@@ -477,8 +477,7 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
             onClick={handleLoadMore}
             className="text-sm text-gray-400 hover:text-gray-300 mb-3"
           >
-            Load thêm bình luận ({commentCount - DEFAULT_COMMENTS_LIMIT} còn
-            lại)
+            Load more comments ({commentCount - DEFAULT_COMMENTS_LIMIT} remaining)
           </button>
         )}
 
@@ -498,13 +497,13 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Viết bình luận..."
-              className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-full text-sm text-white placeholder-gray-500"
+              className="flex-1 px-3 py-2 bg-gray-100 border border-gray-200 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-pink-400"
               disabled={loadingComment}
             />
             <button
               type="submit"
               disabled={loadingComment || !newComment.trim()}
-              className="px-4 py-2 bg-gradient-to-r  text-white rounded-full  disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-gradient-to-r  text-white rounded-full  disabled:cursor-not-allowed disabled:opacity-50"
             >
               <IoSend />
             </button>

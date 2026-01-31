@@ -93,43 +93,40 @@ export default function ShopPage() {
   }, [search, minPrice, maxPrice]);
 
   return (
-    <div className="min-h-screen bg-gray-900 px-6 py-12">
-      <h1 className="text-4xl font-bold mb-10 text-center bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-        🛍️ Cửa hàng thú cưng
-      </h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 px-6 py-12">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Sidebar Filter */}
-        <div className="md:col-span-1 bg-gray-800 p-6 rounded-2xl h-fit sticky top-24 space-y-6">
-          <h2 className="text-xl font-bold text-white mb-2">Tìm kiếm</h2>
+        <div className="md:col-span-1 bg-white p-6 rounded-2xl h-fit sticky top-24 space-y-6 shadow-lg">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Search</h2>
 
           <input
             type="text"
-            placeholder="Tên sản phẩm..."
+            placeholder="Product name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg bg-gray-900 text-white outline-none"
+            className="w-full px-4 py-2 rounded-lg bg-gray-100 text-gray-900 border border-gray-200 outline-none focus:border-pink-400"
           />
 
           <div>
-            <h2 className="text-xl font-bold text-white mt-6 mb-2">
-              Khoảng giá
+            <h2 className="text-xl font-bold text-gray-900 mt-6 mb-2">
+              Price Range
             </h2>
 
             <div className="space-y-3">
               <input
                 type="number"
-                placeholder="Giá từ"
+                placeholder="Price from"
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-gray-900 text-white outline-none"
+                className="w-full px-4 py-2 rounded-lg bg-gray-100 text-gray-900 border border-gray-200 outline-none focus:border-pink-400"
               />
 
               <input
                 type="number"
-                placeholder="Đến giá"
+                placeholder="Price to"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-gray-900 text-white outline-none"
+                className="w-full px-4 py-2 rounded-lg bg-gray-100 text-gray-900 border border-gray-200 outline-none focus:border-pink-400"
               />
             </div>
           </div>
@@ -142,14 +139,14 @@ export default function ShopPage() {
             }}
             className="w-full mt-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 font-semibold"
           >
-            Làm mới bộ lọc
+            Reset Filters
           </button>
         </div>
 
         {/* Product List */}
         <div className="md:col-span-3">
           {loading ? (
-            <p className="text-center text-gray-400">Đang tải sản phẩm...</p>
+            <p className="text-center text-gray-600">Loading products...</p>
           ) : (
             <>
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -157,7 +154,7 @@ export default function ShopPage() {
                   <Link key={p.id} href={`/shop/${p.id}`} className="block">
                     <div
                       key={p.id}
-                      className="bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:scale-[1.02] transition"
+                      className="bg-white rounded-2xl shadow-lg overflow-hidden hover:scale-[1.02] transition"
                     >
                       <Image
                         src={p.images?.[0] || "/no-image.png"}
@@ -168,10 +165,10 @@ export default function ShopPage() {
                       />
 
                       <div className="p-4">
-                        <h2 className="text-lg font-semibold text-white">
+                        <h2 className="text-lg font-semibold text-gray-900">
                           {p.name}
                         </h2>
-                        <p className="text-sm text-gray-400 line-clamp-2">
+                        <p className="text-sm text-gray-600 line-clamp-2">
                           {p.description}
                         </p>
 
@@ -198,9 +195,9 @@ export default function ShopPage() {
                 <button
                   disabled={page === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="px-4 py-2 rounded-lg bg-gray-800 text-white disabled:opacity-40"
+                  className="px-4 py-2 rounded-lg bg-white shadow text-gray-900 disabled:opacity-40"
                 >
-                  ← Trước
+                  ← Back
                 </button>
 
                 {Array.from({ length: totalPages }, (_, i) => (
@@ -210,7 +207,7 @@ export default function ShopPage() {
                     className={`px-4 py-2 rounded-lg ${
                       page === i + 1
                         ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white"
-                        : "bg-gray-800 text-gray-300"
+                        : "bg-white shadow text-gray-900"
                     }`}
                   >
                     {i + 1}
@@ -220,9 +217,9 @@ export default function ShopPage() {
                 <button
                   disabled={page === totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="px-4 py-2 rounded-lg bg-gray-800 text-white disabled:opacity-40"
+                  className="px-4 py-2 rounded-lg bg-white shadow text-gray-900 disabled:opacity-40"
                 >
-                  Sau →
+                  Next →
                 </button>
               </div>
             </>

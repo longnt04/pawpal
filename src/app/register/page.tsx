@@ -202,24 +202,21 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-12 px-4">
-      <div className="w-full max-w-md px-8 py-10 bg-gray-800 rounded-3xl shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 py-12 px-4">
+      <div className="w-full max-w-md px-8 py-10 bg-white rounded-3xl shadow-2xl">
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent flex items-center justify-center gap-2">
             <GiPawHeart className="text-5xl" /> PawPal
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            {" "}
-            Tạo tài khoản mới
-          </p>
+          <p className="text-gray-600 mt-2"> Tạo tài khoản mới</p>
         </div>
 
         {/* Register Form */}
         <form onSubmit={handleRegister} className="space-y-5">
           {/* User Avatar */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Ảnh đại diện (tùy chọn)
             </label>
             <div className="flex items-center gap-4">
@@ -242,8 +239,8 @@ export default function RegisterPage() {
                   </button>
                 </div>
               ) : (
-                <label className="w-20 h-20 rounded-full bg-gray-700 border-2 border-dashed border-gray-500 flex items-center justify-center cursor-pointer hover:bg-gray-600">
-                  <IoImageOutline className="text-3xl text-gray-400" />
+                <label className="w-20 h-20 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200">
+                  <IoImageOutline className="text-3xl text-gray-500" />
                   <input
                     type="file"
                     accept="image/*"
@@ -258,7 +255,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="fullName"
-              className="block text-sm font-medium text-gray-300 mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
               Họ và tên
             </label>
@@ -268,14 +265,14 @@ export default function RegisterPage() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl text-white bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 rounded-xl text-gray-900 bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-pink-400 focus:border-transparent transition"
             />
           </div>
 
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-300 mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
               Email
             </label>
@@ -285,14 +282,14 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl text-white bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 rounded-xl text-gray-900 bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-pink-400 focus:border-transparent transition"
             />
           </div>
 
           <div>
             <label
               htmlFor="phone"
-              className="block text-sm font-medium text-gray-300 mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
               Số điện thoại
             </label>
@@ -302,14 +299,14 @@ export default function RegisterPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl text-white bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 rounded-xl text-gray-900 bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-pink-400 focus:border-transparent transition"
             />
           </div>
 
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-300 mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
               Mật khẩu
             </label>
@@ -320,15 +317,15 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-4 py-3 text-white bg-gray-700 rounded-xl border border-gray-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 text-gray-900 bg-gray-100 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-400 focus:border-transparent transition"
             />
-            <p className="text-xs text-gray-400 mt-1">Tối thiểu 6 ký tự</p>
+            <p className="text-xs text-gray-600 mt-1">Tối thiểu 6 ký tự</p>
           </div>
 
           {/* Pets Section */}
-          <div className="border-t border-gray-700 pt-5">
+          <div className="border-t border-gray-300 pt-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
                 Thú cưng của bạn
               </h3>
               <button
@@ -343,25 +340,25 @@ export default function RegisterPage() {
             {pets.map((pet, index) => (
               <div
                 key={index}
-                className="mb-6 p-4 bg-gray-700 rounded-xl relative"
+                className="mb-6 p-4 bg-gray-100 rounded-xl relative"
               >
                 {pets.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removePet(index)}
-                    className="absolute top-2 right-2 text-red-400 hover:text-red-300"
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-600"
                   >
                     <IoClose className="text-xl" />
                   </button>
                 )}
 
-                <h4 className="text-sm font-medium text-gray-300 mb-3">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
                   Thú cưng #{index + 1}
                 </h4>
 
                 {/* Pet Image */}
                 <div className="mb-3">
-                  <label className="block text-xs text-gray-400 mb-2">
+                  <label className="block text-xs text-gray-600 mb-2">
                     Ảnh thú cưng *
                   </label>
                   {pet.imagePreview ? (
@@ -383,8 +380,8 @@ export default function RegisterPage() {
                       </button>
                     </div>
                   ) : (
-                    <label className="w-24 h-24 rounded-lg bg-gray-600 border-2 border-dashed border-gray-500 flex items-center justify-center cursor-pointer hover:bg-gray-500">
-                      <IoImageOutline className="text-2xl text-gray-400" />
+                    <label className="w-24 h-24 rounded-lg bg-gray-200 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-300">
+                      <IoImageOutline className="text-2xl text-gray-500" />
                       <input
                         type="file"
                         accept="image/*"
@@ -398,7 +395,7 @@ export default function RegisterPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">
+                    <label className="block text-xs text-gray-600 mb-1">
                       Tên *
                     </label>
                     <input
@@ -406,11 +403,11 @@ export default function RegisterPage() {
                       value={pet.name}
                       onChange={(e) => updatePet(index, "name", e.target.value)}
                       required
-                      className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">
+                    <label className="block text-xs text-gray-600 mb-1">
                       Giống *
                     </label>
                     <input
@@ -420,11 +417,11 @@ export default function RegisterPage() {
                         updatePet(index, "breed", e.target.value)
                       }
                       required
-                      className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">
+                    <label className="block text-xs text-gray-600 mb-1">
                       Tuổi *
                     </label>
                     <input
@@ -435,11 +432,11 @@ export default function RegisterPage() {
                       }
                       required
                       min="0"
-                      className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">
+                    <label className="block text-xs text-gray-600 mb-1">
                       Loài *
                     </label>
                     <select
@@ -448,7 +445,7 @@ export default function RegisterPage() {
                         updatePet(index, "species", e.target.value)
                       }
                       required
-                      className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-pink-400 focus:border-transparent"
                     >
                       <option value="dog">Chó</option>
                       <option value="cat">Mèo</option>
@@ -471,11 +468,11 @@ export default function RegisterPage() {
 
         {/* Divider */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-600">
             Đã có tài khoản?{" "}
             <Link
               href="/login"
-              className="text-pink-500 hover:text-pink-400 font-semibold"
+              className="text-pink-500 hover:text-pink-600 font-semibold"
             >
               Đăng nhập
             </Link>

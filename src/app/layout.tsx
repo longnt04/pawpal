@@ -14,8 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PawPal - Hẹn hò, kết bạn",
-  description: "Tìm bạn cho thú cưng của bạn và mua sắm đồ thú cưng",
+  title: "PawPal - Dating & Friends",
+  description: "Find friends for your pets and shop for pet supplies",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+  },
 };
 
 export default function RootLayout({

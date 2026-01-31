@@ -518,7 +518,7 @@ export default function MatchPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-pink-500 mx-auto"></div>
-          <p className="text-gray-600 mt-4">Đang tải...</p>
+          <p className="text-gray-600 mt-4">Loading...</p>
         </div>
       </div>
     );

@@ -36,13 +36,13 @@ export default function ConversationList({
   currentPetId,
 }: ConversationListProps) {
   return (
-    <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col h-full">
-      <div className="p-4 border-b border-gray-700">
-        <h2 className="text-xl font-bold text-white">Tin nhắn</h2>
+    <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full shadow-lg">
+      <div className="p-4 border-b border-gray-200">
+        <h2 className="text-xl font-bold text-gray-900">Tin nhắn</h2>
       </div>
       <div className="flex-1 overflow-y-auto">
         {matches.length === 0 ? (
-          <div className="p-4 text-center text-gray-400">
+          <div className="p-4 text-center text-gray-500">
             <p>Chưa có cuộc trò chuyện nào</p>
             <p className="text-sm mt-2">
               Hãy match với các thú cưng khác để bắt đầu nhắn tin!
@@ -53,8 +53,8 @@ export default function ConversationList({
             <div
               key={match.matchId}
               onClick={() => onSelectMatch(match.matchId)}
-              className={`flex items-center p-4 hover:bg-gray-700 cursor-pointer transition-colors ${
-                selectedMatchId === match.matchId ? "bg-gray-700" : ""
+              className={`flex items-center p-4 hover:bg-gray-100 cursor-pointer transition-colors ${
+                selectedMatchId === match.matchId ? "bg-gray-100" : ""
               }`}
             >
               <div className="relative">
@@ -81,11 +81,11 @@ export default function ConversationList({
               </div>
               <div className="ml-3 flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-white truncate">
+                  <h3 className="font-semibold text-gray-900 truncate">
                     {match.otherPet.name}
                   </h3>
                   {match.lastMessage && (
-                    <span className="text-xs text-gray-400 ml-2">
+                    <span className="text-xs text-gray-500 ml-2">
                       {formatDistanceToNow(
                         new Date(match.lastMessage.created_at),
                         { addSuffix: true, locale: vi },
@@ -96,8 +96,8 @@ export default function ConversationList({
                 <p
                   className={`text-sm truncate ${
                     match.unreadCount > 0
-                      ? "text-white font-medium"
-                      : "text-gray-400"
+                      ? "text-gray-900 font-medium"
+                      : "text-gray-600"
                   }`}
                 >
                   {match.lastMessage

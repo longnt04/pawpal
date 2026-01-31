@@ -56,14 +56,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="w-full max-w-md px-8 py-10 bg-gray-800 rounded-3xl shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
+      <div className="w-full max-w-md px-8 py-10 bg-white rounded-3xl shadow-2xl">
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent flex items-center justify-center gap-2">
             <GiPawHeart className="text-5xl" /> PawPal
           </h1>
-          <p className="text-gray-400 mt-2">Tìm bạn cho thú cưng của bạn</p>
+          <p className="text-gray-600 mt-2">Find friends for your pets</p>
         </div>
 
         {/* Login Form */}
@@ -71,7 +71,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-300 mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
               Email
             </label>
@@ -81,16 +81,16 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl text-white bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 rounded-xl text-gray-900 bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-pink-400 focus:border-transparent transition"
             />
           </div>
 
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-300 mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Mật khẩu
+              Password
             </label>
             <input
               id="password"
@@ -98,7 +98,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl text-white bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 rounded-xl text-gray-900 bg-gray-100 border border-gray-200 focus:ring-2 focus:ring-pink-400 focus:border-transparent transition"
             />
           </div>
 
@@ -107,19 +107,19 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl hover:from-pink-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
         {/* Divider */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-400">
-            Chưa có tài khoản?{" "}
+          <p className="text-sm text-gray-600">
+            Don't have an account?{" "}
             <Link
               href="/register"
-              className="text-pink-500 hover:text-pink-400 font-semibold"
+              className="text-pink-500 hover:text-pink-600 font-semibold"
             >
-              Đăng ký ngay
+              Sign up now
             </Link>
           </p>
         </div>
