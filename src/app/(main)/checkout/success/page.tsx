@@ -52,6 +52,8 @@ export function SuccessPage() {
           orderCode,
           userId: user.id,
           items,
+          address: localStorage.getItem("checkout_address"),
+          phone: localStorage.getItem("checkout_phone"),
         }),
       });
 

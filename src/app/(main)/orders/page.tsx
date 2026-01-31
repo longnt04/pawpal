@@ -3,71 +3,135 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
-import Link from "next/link";
 
 type OrderItem = {
+  id: string;
   quantity: number;
   price: number;
   products: {
     name: string;
     images: string[];
-  }[];
+  } | null;
 };
 
 type Order = {
   id: string;
   total_price: number;
   status: string;
+  payment_status: string;
   created_at: string;
   order_items: OrderItem[];
+  phone: string;
+  shipping_address: string;
 };
 
 export default function OrdersPage() {
   const supabase = createClient();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const PAGE_SIZE = 5;
+
+  const [page, setPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+
+  const toggleOrder = (id: string) => {
+    setExpandedOrderId((prev) => (prev === id ? null : id));
+  };
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  const fetchOrders = async () => {
+  useEffect(() => {
+    fetchOrders(page);
+  }, [page]);
+
+  const totalPages = Math.ceil(totalOrders / PAGE_SIZE);
+
+  const fetchOrders = async (currentPage = 1) => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) return;
 
-    const { data } = await supabase
+    const from = (currentPage - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const { data, count } = await supabase
       .from("orders")
+      .select(
+        `
+      id,
+      total_price,
+      status,
+      payment_status,
+      created_at,
+      phone,
+      shipping_address
+    `,
+        { count: "exact" }, // 👈 để biết tổng số đơn
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .range(from, to); // 👈 PHÂN TRANG Ở ĐÂY
+
+    const { data: orderItems, error } = await supabase.from("order_items")
       .select(`
         id,
-        total_price,
-        status,
-        created_at,
-        order_items (
-          quantity,
-          price,
-          products ( name, images )
+        order_id,
+        price,
+        quantity,
+        products:product_id (
+          name,
+          images
         )
-      `)
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      `);
 
-    setOrders((data as Order[]) || []);
+    if (error) {
+      console.error(error);
+    } else {
+      console.log(orderItems);
+    }
+
+    const mergedOrders: Order[] = (data || []).map((order: any) => ({
+      ...order,
+      order_items: orderItems!.filter(
+        (item: any) => item.order_id === order.id,
+      ),
+    }));
+
+    setOrders(mergedOrders);
+
+    setTotalOrders(count || 0);
     setLoading(false);
   };
 
-  const getStatusColor = (status: string) => {
+  const getPaymentStatus = (status: string) => {
     switch (status) {
       case "paid":
         return "text-green-400";
       case "pending":
         return "text-yellow-400";
+      case "failed":
+        return "text-red-400";
+      default:
+        return "text-gray-400";
+    }
+  };
+
+  const getShippingStatus = (status: string) => {
+    switch (status) {
+      case "processing":
+        return "text-yellow-400";
       case "shipping":
         return "text-blue-400";
       case "completed":
-        return "text-purple-400";
+        return "text-green-400";
+      case "cancelled":
+        return "text-red-400";
       default:
         return "text-gray-400";
     }
@@ -90,7 +154,7 @@ export default function OrdersPage() {
               key={order.id}
               className="bg-gray-800 rounded-2xl p-6 shadow-lg"
             >
-              {/* Header đơn */}
+              {/* Header */}
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <p className="text-sm text-gray-400">
@@ -101,55 +165,102 @@ export default function OrdersPage() {
                   </p>
                 </div>
 
-                <div className="text-right">
-                  <p
-                    className={`font-semibold ${getStatusColor(order.status)}`}
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p
+                      className={`font-semibold ${getShippingStatus(order.status)}`}
+                    >
+                      🚚 {order.status.toUpperCase()}
+                    </p>
+                    <p
+                      className={`text-sm ${getPaymentStatus(order.payment_status)}`}
+                    >
+                      💳 {order.payment_status.toUpperCase()}
+                    </p>
+                    <p className="text-pink-400 font-bold text-lg">
+                      {(order.total_price ?? 0).toLocaleString()}₫
+                    </p>
+                  </div>
+
+                  {/* Nút xổ */}
+                  <button
+                    onClick={() => toggleOrder(order.id)}
+                    className="text-2xl transition-transform duration-300"
                   >
-                    {order.status.toUpperCase()}
-                  </p>
-                  <p className="text-pink-400 font-bold text-lg">
-                    {order.total_price.toLocaleString()}₫
-                  </p>
+                    {expandedOrderId === order.id ? "▲" : "▼"}
+                  </button>
                 </div>
               </div>
 
-              {/* Sản phẩm */}
-              <div className="space-y-3">
-                {order.order_items.map((item, index) => {
-                  const product = item.products?.[0];
-                  if (!product) return null;
+              {/* Thông tin giao hàng */}
+              <div className="mb-4 border-t border-gray-700 pt-4 text-sm text-gray-300 space-y-1">
+                <p>📞 SĐT: {order.phone}</p>
+                <p>📍 Địa chỉ: {order.shipping_address}</p>
+              </div>
 
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-center gap-4 bg-gray-700/50 p-3 rounded-xl"
-                    >
-                      <Image
-                        src={product.images?.[0] || "/no-image.png"}
-                        alt={product.name}
-                        width={60}
-                        height={60}
-                        className="rounded-lg object-cover"
-                      />
+              {/* Chi tiết sản phẩm (accordion) */}
+              {expandedOrderId === order.id && (
+                <div className="space-y-3 mt-4 border-t border-gray-700 pt-4">
+                  {order.order_items.map((item) => {
+                    const product = item.products;
+                    if (!product) return null;
 
-                      <div className="flex-1">
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-gray-400">
-                          {item.quantity} x {item.price.toLocaleString()}₫
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-4 bg-gray-700/50 p-3 rounded-xl"
+                      >
+                        <Image
+                          src={product.images?.[0] || "/no-image.png"}
+                          alt={product.name}
+                          width={60}
+                          height={60}
+                          className="rounded-lg object-cover"
+                        />
+
+                        <div className="flex-1">
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-gray-400">
+                            {item.quantity} x{" "}
+                            {(item.price ?? 0).toLocaleString()}₫
+                          </p>
+                        </div>
+
+                        <p className="text-pink-400 font-semibold">
+                          {((item.price ?? 0) * item.quantity).toLocaleString()}
+                          ₫
                         </p>
                       </div>
-
-                      <p className="text-pink-400 font-semibold">
-                        {(item.price * item.quantity).toLocaleString()}₫
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
+      {/* Pagination */}
+      <div className="flex justify-center items-center gap-4 mt-8">
+        <button
+          onClick={() => setPage((p) => Math.max(p - 1, 1))}
+          disabled={page === 1}
+          className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-40"
+        >
+          ← Trang trước
+        </button>
+
+        <span className="text-gray-300">
+          Trang {page} / {totalPages || 1}
+        </span>
+
+        <button
+          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+          disabled={page === totalPages}
+          className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-40"
+        >
+          Trang sau →
+        </button>
+      </div>
     </div>
   );
 }

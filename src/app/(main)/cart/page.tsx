@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -10,6 +10,8 @@ export default function CartPage() {
   const supabase = createClient();
   const [items, setItems] = useState<any[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     fetchCart();
@@ -44,53 +46,116 @@ export default function CartPage() {
 
   const total = items.reduce(
     (sum, item) => sum + item.products.price * item.quantity,
-    0
+    0,
   );
 
   const handleCheckout = async () => {
     if (items.length === 0) return toast.error("Giỏ hàng trống");
-  
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
-  
+
     if (!user) return toast.error("Vui lòng đăng nhập");
-  
+
+    const productIds = items.map((i: any) => i.products?.id).filter(Boolean);
+
+    // 🔍 Lấy giá thật từ DB
+    const { data: products, error: productError } = await supabase
+      .from("products")
+      .select("id, price")
+      .in("id", productIds);
+
+    if (productError) throw productError;
+
+    const priceMap: Record<string, number> = {};
+    products.forEach((p) => {
+      priceMap[p.id] = p.price;
+    });
+
+    // 🧮 Tính tổng tiền chuẩn
+    const totalAmount = items.reduce((sum: number, item: any) => {
+      const productId = item.products?.id;
+      const price = priceMap[productId] ?? 0;
+      return sum + price * item.quantity;
+    }, 0);
+
     // COD → tạo đơn hàng trực tiếp
     if (paymentMethod === "cod") {
-      const { error } = await supabase.from("orders").insert({
-        user_id: user.id,
-        total_amount: total,
-        payment_method: "COD",
-        status: "pending",
+      // 1️⃣ Tạo order và LẤY LẠI ORDER ID
+      const { data: order, error } = await supabase
+        .from("orders")
+        .insert({
+          user_id: user.id,
+          total_price: totalAmount,
+          status: "processing",
+          order_code: null,
+          payment_method: "COD",
+          payment_status: "pending", // COD chưa thanh toán
+          paid_at: null,
+          shipping_address: address,
+          phone: phone,
+        })
+        .select()
+        .single(); // 👈 QUAN TRỌNG
+
+      if (error || !order) {
+        toast.error("Không thể tạo đơn hàng");
+        return;
+      }
+
+      // 2️⃣ Tạo order_items
+      const orderItems = items.map((item: any) => {
+        const productId = item.products?.id;
+
+        return {
+          order_id: order.id, // 👈 giờ đã có id thật
+          product_id: productId,
+          price: priceMap[productId] ?? 0,
+          quantity: item.quantity,
+        };
       });
-  
-      if (error) return toast.error("Không thể tạo đơn hàng");
-  
+
+      const { error: itemError } = await supabase
+        .from("order_items")
+        .insert(orderItems);
+
+      if (itemError) {
+        console.error(itemError);
+        toast.error("Lỗi lưu sản phẩm trong đơn hàng");
+        return;
+      }
+
+      // 3️⃣ Xoá giỏ hàng
       await supabase.from("cart_items").delete().eq("user_id", user.id);
-  
+
       toast.success("Đặt hàng thành công! 🐾");
       fetchCart();
       return;
     }
-  
+
+    localStorage.setItem("checkout_address", address);
+    localStorage.setItem("checkout_phone", phone);
+
     // PayOS → gọi API tạo link thanh toán
     const res = await fetch("/api/create-payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({
+        amount: total,
+        address,
+        phone,
+      }),
     });
-  
+
     const data = await res.json();
-  
+
     if (data.checkoutUrl) {
       window.location.href = data.checkoutUrl;
     } else {
       toast.error("Không tạo được link thanh toán");
     }
   };
-  
-
 
   return (
     <div className="min-h-screen bg-gray-900 px-6 py-12 text-white">
@@ -127,18 +192,14 @@ export default function CartPage() {
                 {/* Quantity */}
                 <div className="flex items-center gap-3 mt-2">
                   <button
-                    onClick={() =>
-                      updateQuantity(item.id, item.quantity - 1)
-                    }
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
                     className="px-2 py-1 bg-gray-700 rounded"
                   >
                     −
                   </button>
                   <span>{item.quantity}</span>
                   <button
-                    onClick={() =>
-                      updateQuantity(item.id, item.quantity + 1)
-                    }
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     className="px-2 py-1 bg-gray-700 rounded"
                   >
                     +
@@ -156,6 +217,29 @@ export default function CartPage() {
         {/* Thanh toán */}
         <div className="bg-gray-800 p-6 rounded-2xl h-fit">
           <h2 className="text-xl font-semibold mb-4">Thanh toán</h2>
+
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="text-sm text-gray-300">Địa chỉ giao hàng</label>
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full mt-1 p-3 rounded-lg bg-gray-700 text-white outline-none"
+                placeholder="Nhập địa chỉ nhận hàng..."
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-300">Số điện thoại</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full mt-1 p-3 rounded-lg bg-gray-700 text-white outline-none"
+                placeholder="Nhập số điện thoại..."
+              />
+            </div>
+          </div>
 
           <div className="space-y-3 mb-6">
             <label className="flex items-center gap-2">
@@ -181,9 +265,7 @@ export default function CartPage() {
 
           <div className="flex justify-between text-lg font-semibold mb-6">
             <span>Tổng tiền:</span>
-            <span className="text-pink-400">
-              {total.toLocaleString()}₫
-            </span>
+            <span className="text-pink-400">{total.toLocaleString()}₫</span>
           </div>
 
           <button
@@ -191,11 +273,8 @@ export default function CartPage() {
             disabled={items.length === 0}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
           >
-            {paymentMethod === "cod"
-              ? "Đặt hàng (COD)"
-              : "Thanh toán online"}
+            {paymentMethod === "cod" ? "Đặt hàng (COD)" : "Thanh toán online"}
           </button>
-
         </div>
       </div>
     </div>

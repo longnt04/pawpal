@@ -8,16 +8,14 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { orderCode, userId, items } = await req.json();
+    const { orderCode, userId, items, address, phone } = await req.json();
 
     if (!orderCode || !userId || !items?.length) {
       return NextResponse.json({ error: "Missing data" }, { status: 400 });
     }
 
     // 🧾 Lấy product_id đúng cách
-    const productIds = items
-      .map((i: any) => i.products?.id)
-      .filter(Boolean);
+    const productIds = items.map((i: any) => i.products?.id).filter(Boolean);
 
     // 🔍 Lấy giá thật từ DB
     const { data: products, error: productError } = await supabase
@@ -39,7 +37,6 @@ export async function POST(req: Request) {
       return sum + price * item.quantity;
     }, 0);
 
-
     // 🧾 1. Tạo order
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -51,6 +48,8 @@ export async function POST(req: Request) {
         payment_method: "bank",
         payment_status: "paid",
         paid_at: new Date().toISOString(),
+        shipping_address: address,
+        phone: phone,
       })
       .select()
       .single();
@@ -74,7 +73,6 @@ export async function POST(req: Request) {
       .insert(orderItems);
 
     if (itemError) throw itemError;
-
 
     // 💳 3. Transaction
     await supabase.from("transactions").insert({
