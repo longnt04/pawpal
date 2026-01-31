@@ -270,13 +270,22 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
             };
 
             setMessages((prev) => {
-              // Remove optimistic message if exists
-              const filtered = prev.filter((m) => !m.isOptimistic);
               // Check if message already exists
-              if (filtered.some((m) => m.id === message.id)) {
-                return filtered;
+              if (prev.some((m) => m.id === message.id)) {
+                return prev;
               }
-              return [...filtered, message];
+              // Remove optimistic message if this is the real version
+              // Optimistic messages have temp IDs and same content/sender
+              const withoutOptimistic = prev.filter((m) => {
+                if (!m.isOptimistic) return true;
+                // Remove optimistic if it matches this message's content and sender
+                return !(
+                  m.sender_pet_id === message.sender_pet_id &&
+                  m.content === message.content &&
+                  m.image_url === message.image_url
+                );
+              });
+              return [...withoutOptimistic, message];
             });
 
             // Scroll to bottom to show new message

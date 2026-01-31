@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ConversationList from "@/components/messages/ConversationList";
 import ChatWindow from "@/components/messages/ChatWindow";
 import { IoChatbubbles } from "react-icons/io5";
@@ -31,6 +31,7 @@ export default function MessagesPage() {
   const [currentPetId, setCurrentPetId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     loadMatches();
@@ -46,7 +47,10 @@ export default function MessagesPage() {
     );
 
     return () => {
-      supabase.channel("all-messages").unsubscribe();
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
       clearInterval(presenceInterval);
     };
   }, []);
@@ -79,7 +83,7 @@ export default function MessagesPage() {
   };
 
   const subscribeToAllMessages = () => {
-    supabase
+    channelRef.current = supabase
       .channel("all-messages")
       .on(
         "postgres_changes",
