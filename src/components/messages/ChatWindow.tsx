@@ -228,14 +228,7 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
               reply_to_message_id,
               is_read,
               created_at,
-              sender:pets!messages_sender_pet_id_fkey(id, name, avatar_url),
-              replied_message:messages!messages_reply_to_message_id_fkey(
-                id,
-                content,
-                image_url,
-                sender_pet_id,
-                sender:pets!messages_sender_pet_id_fkey(name)
-              )
+              sender:pets!messages_sender_pet_id_fkey(id, name, avatar_url)
             `,
             )
             .eq("id", payload.new.id)
@@ -247,18 +240,29 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
               ? data.sender[0]
               : data.sender;
 
-            // Handle replied_message.sender being an array
+            // Fetch replied message separately if exists
             let repliedMessage = null;
-            if (data.replied_message) {
-              const rawReplied = Array.isArray(data.replied_message)
-                ? data.replied_message[0]
-                : data.replied_message;
-              if (rawReplied) {
+            if (data.reply_to_message_id) {
+              const { data: repliedData } = await supabase
+                .from("messages")
+                .select(
+                  `
+                  id,
+                  content,
+                  image_url,
+                  sender_pet_id,
+                  sender:pets!messages_sender_pet_id_fkey(name)
+                `,
+                )
+                .eq("id", data.reply_to_message_id)
+                .single();
+
+              if (repliedData) {
                 repliedMessage = {
-                  ...rawReplied,
-                  sender: Array.isArray(rawReplied.sender)
-                    ? rawReplied.sender[0]
-                    : rawReplied.sender,
+                  ...repliedData,
+                  sender: Array.isArray(repliedData.sender)
+                    ? repliedData.sender[0]
+                    : repliedData.sender,
                 };
               }
             }
