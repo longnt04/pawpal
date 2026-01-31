@@ -68,8 +68,11 @@ export async function GET() {
           .single();
 
         // Xác định pet còn lại (không phải pet của user)
-        const otherPet =
+        const rawOtherPet =
           match.pet_1_id === userPetId ? match.pet_2 : match.pet_1;
+        const otherPet = Array.isArray(rawOtherPet)
+          ? rawOtherPet[0]
+          : rawOtherPet;
 
         // Lấy thông tin owner để check online status
         const { data: ownerData } = await supabase
