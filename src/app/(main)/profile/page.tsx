@@ -50,6 +50,8 @@ export default function ProfilePage() {
     imagePreview: "",
   });
 
+  const [address, setAddress] = useState("");
+
   useEffect(() => {
     loadUserData();
   }, []);
@@ -71,6 +73,7 @@ export default function ProfilePage() {
         setUser(userData);
         setFullName(userData.full_name || "");
         setPhone(userData.phone || "");
+        setAddress(userData.address || ""); // 👈 thêm dòng này
         setAvatarPreview(userData.avatar_url || "");
       }
 
@@ -133,6 +136,7 @@ export default function ProfilePage() {
         .update({
           full_name: fullName,
           phone: phone,
+          address: address,
           avatar_url: avatarUrl,
         })
         .eq("id", user.id);
@@ -402,6 +406,19 @@ export default function ProfilePage() {
                   className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Địa chỉ
+                </label>
+                <textarea
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  placeholder="Nhập địa chỉ của bạn..."
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Email
