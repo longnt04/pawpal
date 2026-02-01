@@ -515,12 +515,27 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           setCallStatus("idle");
           callWindowRef.current = null;
           callBroadcastRef.current?.close();
+          // Clear timeout when call ends
+          if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+          }
         } else if (event.data.type === "CALL_REJECTED") {
           setCallStatus("idle");
           callWindowRef.current = null;
           callBroadcastRef.current?.close();
+          // Clear timeout when rejected
+          if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+          }
         } else if (event.data.type === "CALL_ACCEPTED") {
           setCallStatus("active");
+          // Clear timeout when accepted
+          if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+          }
         }
       };
 
@@ -541,10 +556,14 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
 
       // Set timeout: auto-end call after 60 seconds if not answered
       callTimeoutRef.current = setTimeout(() => {
-        if (callStatus !== "active") {
-          callWindowRef.current?.close();
-          setCallStatus("idle");
+        console.log("⏰ Call timeout - no answer after 60 seconds");
+        // Check if window still exists and close it
+        if (callWindowRef.current && !callWindowRef.current.closed) {
+          callWindowRef.current.close();
         }
+        setCallStatus("idle");
+        callBroadcastRef.current?.close();
+        alert("Call timed out - no answer");
       }, 60000);
 
       // Cleanup channel sau khi gửi

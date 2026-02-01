@@ -126,8 +126,19 @@ export class WebRTCManager {
     remotePetId: string,
     currentPetId: string,
   ): Promise<MediaStream> {
+    console.log("🟢 Accepting call, setting up peer connection...");
+
+    // Ensure peer connection exists
+    if (!this.peerConnection) {
+      console.log("🟢 Creating peer connection for incoming call");
+      await this.subscribeToSignals(currentPetId);
+      this.createPeerConnection();
+    }
+
     // Get user media first
+    console.log("🟢 Requesting media permissions...");
     const stream = await this.getUserMedia(type);
+    console.log("🟢 Media stream acquired");
 
     // Add local stream tracks to peer connection
     stream.getTracks().forEach((track) => {
@@ -135,9 +146,11 @@ export class WebRTCManager {
     });
 
     // Create and send answer after adding tracks
+    console.log("🟢 Creating answer...");
     const answer = await this.peerConnection!.createAnswer();
     await this.peerConnection!.setLocalDescription(answer);
 
+    console.log("🟢 Sending answer signal...");
     await this.sendSignal("answer", {
       answer,
       from: currentPetId,
