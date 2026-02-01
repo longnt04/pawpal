@@ -487,15 +487,14 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     try {
       setCallStatus("connecting");
 
-      // GỬI SIGNAL NGAY LẬP TỨC để bên kia nhận được thông báo
+      // Send call notification via Supabase broadcast
       console.log("📞 Sending call notification to", match.otherPet.id);
       const channel = supabase.channel(`call:${match.matchId}`);
       await channel.subscribe();
 
-      // Đợi channel ready
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Gửi incoming-call signal (không phải offer)
+      // Send incoming-call notification
       await channel.send({
         type: "broadcast",
         event: "incoming-call",
@@ -503,6 +502,7 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           type: type,
           from: currentPetId,
           to: match.otherPet.id,
+          matchId: match.matchId,
         },
       });
       console.log("📞 Call notification sent");
@@ -514,7 +514,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           setCallStatus("idle");
           callWindowRef.current = null;
           callBroadcastRef.current?.close();
-          // Clear timeout when call ends
           if (callTimeoutRef.current) {
             clearTimeout(callTimeoutRef.current);
             callTimeoutRef.current = null;
@@ -523,14 +522,12 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           setCallStatus("idle");
           callWindowRef.current = null;
           callBroadcastRef.current?.close();
-          // Clear timeout when rejected
           if (callTimeoutRef.current) {
             clearTimeout(callTimeoutRef.current);
             callTimeoutRef.current = null;
           }
         } else if (event.data.type === "CALL_ACCEPTED") {
           setCallStatus("active");
-          // Clear timeout when accepted
           if (callTimeoutRef.current) {
             clearTimeout(callTimeoutRef.current);
             callTimeoutRef.current = null;
@@ -538,8 +535,8 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         }
       };
 
-      // Open call window
-      const callUrl = `/call/${match.matchId}?type=${type}&incoming=false&remotePetId=${match.otherPet.id}&remotePetName=${encodeURIComponent(match.otherPet.name)}&remotePetAvatar=${encodeURIComponent(match.otherPet.avatar_url || "")}&currentPetId=${currentPetId}`;
+      // Open call window with Stream.io
+      const callUrl = `/call/${match.matchId}?incoming=false`;
       callWindowRef.current = window.open(
         callUrl,
         "_blank",
@@ -556,7 +553,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       // Set timeout: auto-end call after 60 seconds if not answered
       callTimeoutRef.current = setTimeout(() => {
         console.log("⏰ Call timeout - no answer after 60 seconds");
-        // Check if window still exists and close it
         if (callWindowRef.current && !callWindowRef.current.closed) {
           callWindowRef.current.close();
         }

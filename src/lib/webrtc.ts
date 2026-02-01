@@ -103,9 +103,13 @@ export class WebRTCManager {
     const offer = await this.peerConnection!.createOffer();
     await this.peerConnection!.setLocalDescription(offer);
 
-    // Add delay to ensure receiver's channel is subscribed
-    console.log("🔵 Waiting 1 second before sending offer...");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Wait for receiver to signal ready, or timeout after 10 seconds
+    console.log("🔵 Waiting for receiver to be ready...");
+    const readyReceived = await this.waitForReceiverReady(10000);
+
+    if (!readyReceived) {
+      console.log("🔵 Receiver not ready after 10s, sending offer anyway...");
+    }
 
     // Send call offer via Supabase
     console.log("🔵 Sending offer signal...");
@@ -118,6 +122,25 @@ export class WebRTCManager {
     console.log("🔵 Offer sent successfully");
 
     return stream;
+  }
+
+  // Wait for receiver ready signal
+  private waitForReceiverReady(timeout: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        resolve(false);
+      }, timeout);
+
+      const handleReady = (payload: any) => {
+        if (payload.type === "receiver-ready") {
+          console.log("🔵 Receiver is ready!");
+          clearTimeout(timer);
+          resolve(true);
+        }
+      };
+
+      this.channel?.on("broadcast", { event: "*" }, handleReady).subscribe();
+    });
   }
 
   // Accept a call
@@ -206,6 +229,14 @@ export class WebRTCManager {
       payload,
     });
     console.log(`🔵 Signal send result:`, result);
+  }
+
+  // Public method to send receiver-ready signal
+  async sendReceiverReady(currentPetId: string) {
+    console.log("🟢 Sending receiver-ready signal to caller");
+    await this.sendSignal("receiver-ready", {
+      from: currentPetId,
+    });
   }
 
   // Subscribe to signaling messages

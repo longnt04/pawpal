@@ -178,8 +178,8 @@ export default function GlobalCallNotification() {
       ringtoneRef.current.currentTime = 0;
     }
 
-    // Open call window
-    const callUrl = `/call/${incomingCall.matchId}?type=${incomingCall.callType}&incoming=true&remotePetId=${incomingCall.callerPetId}&remotePetName=${encodeURIComponent(incomingCall.callerPetName)}&remotePetAvatar=${encodeURIComponent(incomingCall.callerPetAvatar || "")}&currentPetId=${incomingCall.currentPetId}`;
+    // Open call window with Stream.io
+    const callUrl = `/call/${incomingCall.matchId}?incoming=true`;
 
     window.open(callUrl, "_blank", "width=800,height=600");
 
