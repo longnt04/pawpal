@@ -86,6 +86,8 @@ export class WebRTCManager {
     remotePetId: string,
     currentPetId: string,
   ): Promise<MediaStream> {
+    console.log("🔵 Starting call from", currentPetId, "to", remotePetId);
+
     // Subscribe to signals FIRST
     await this.subscribeToSignals(currentPetId);
 
@@ -101,13 +103,19 @@ export class WebRTCManager {
     const offer = await this.peerConnection!.createOffer();
     await this.peerConnection!.setLocalDescription(offer);
 
+    // Add delay to ensure receiver's channel is subscribed
+    console.log("🔵 Waiting 1 second before sending offer...");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Send call offer via Supabase
+    console.log("🔵 Sending offer signal...");
     await this.sendSignal("offer", {
       offer,
       type,
       from: currentPetId,
       to: remotePetId,
     });
+    console.log("🔵 Offer sent successfully");
 
     return stream;
   }
@@ -172,48 +180,63 @@ export class WebRTCManager {
   // Send signal via Supabase broadcast
   private async sendSignal(event: string, payload: any) {
     if (!this.channel) {
-      console.error("Channel not initialized");
+      console.error("❌ Channel not initialized for sending signal");
       return;
     }
-    await this.channel.send({
+    console.log(
+      `🔵 Sending signal: ${event} on channel: ${this.channelName}`,
+      payload,
+    );
+    const result = await this.channel.send({
       type: "broadcast",
       event,
       payload,
     });
+    console.log(`🔵 Signal send result:`, result);
   }
 
   // Subscribe to signaling messages
   async subscribeToSignals(currentPetId: string) {
     if (this.channel) {
       // Already subscribed
+      console.log("🔵 Channel already exists");
       return;
     }
 
+    console.log(`🔵 Creating channel: ${this.channelName}`);
     this.channel = this.supabase.channel(this.channelName);
 
     this.channel
       .on("broadcast", { event: "answer" }, async (payload: any) => {
+        console.log("🔵 Received answer event:", payload);
         if (payload.payload.to === currentPetId) {
           await this.handleAnswer(payload.payload.answer);
         }
       })
       .on("broadcast", { event: "ice-candidate" }, async (payload: any) => {
+        console.log("🔵 Received ICE candidate");
         await this.handleIceCandidate(payload.payload.candidate);
       })
       .on("broadcast", { event: "call-rejected" }, () => {
+        console.log("🔵 Call rejected");
         if (this.onCallEndCallback) {
           this.onCallEndCallback();
         }
       })
       .on("broadcast", { event: "call-end" }, () => {
+        console.log("🔵 Call ended");
         if (this.onCallEndCallback) {
           this.onCallEndCallback();
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`🔵 Channel subscription status:`, status);
+      });
 
     // Wait a bit for subscription to be ready
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    console.log("🔵 Waiting 500ms for channel to be ready...");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    console.log("🔵 Channel should be ready now");
   }
 
   // Send rejection signal

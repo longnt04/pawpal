@@ -107,6 +107,11 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
 
   useEffect(() => {
     if (match) {
+      // Reset state khi đổi conversation
+      setMessages([]);
+      setHasMore(true);
+      setIsLoadingMore(false);
+
       loadMessages();
       loadReactions();
       markMessagesAsRead();
@@ -116,6 +121,7 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     }
 
     return () => {
+      // Cleanup channels
       if (messagesChannelRef.current) {
         messagesChannelRef.current.unsubscribe();
         messagesChannelRef.current = null;
@@ -132,15 +138,21 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         callChannelRef.current.unsubscribe();
         callChannelRef.current = null;
       }
+
+      // Cleanup timeouts
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
       if (otherTypingTimeoutRef.current) {
         clearTimeout(otherTypingTimeoutRef.current);
+        otherTypingTimeoutRef.current = null;
       }
       if (callTimeoutRef.current) {
         clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
       }
+
       // Close call window if open
       if (callWindowRef.current) {
         callWindowRef.current.close();
@@ -240,8 +252,17 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const subscribeToMessages = () => {
     if (!match) return;
 
+    // Unsubscribe old channel first
+    if (messagesChannelRef.current) {
+      messagesChannelRef.current.unsubscribe();
+    }
+
     messagesChannelRef.current = supabase
-      .channel(`messages:${match.matchId}`)
+      .channel(`messages:${match.matchId}`, {
+        config: {
+          broadcast: { self: false },
+        },
+      })
       .on(
         "postgres_changes",
         {
@@ -343,8 +364,15 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const subscribeToReactions = () => {
     if (!match) return;
 
+    // Unsubscribe old channel first
+    if (reactionsChannelRef.current) {
+      reactionsChannelRef.current.unsubscribe();
+    }
+
     reactionsChannelRef.current = supabase
-      .channel(`reactions:${match.matchId}`)
+      .channel(`reactions:${match.matchId}`, {
+        config: { broadcast: { self: false } },
+      })
       .on(
         "postgres_changes",
         {
@@ -363,7 +391,14 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const subscribeToTyping = () => {
     if (!match) return;
 
-    typingChannelRef.current = supabase.channel(`typing:${match.matchId}`);
+    // Unsubscribe old channel first
+    if (typingChannelRef.current) {
+      typingChannelRef.current.unsubscribe();
+    }
+
+    typingChannelRef.current = supabase.channel(`typing:${match.matchId}`, {
+      config: { broadcast: { self: false } },
+    });
 
     typingChannelRef.current
       .on("broadcast", { event: "typing" }, (payload) => {
@@ -452,6 +487,27 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     try {
       setCallStatus("connecting");
 
+      // GỬI SIGNAL NGAY LẬP TỨC để bên kia nhận được thông báo
+      console.log("📞 Sending call notification to", match.otherPet.id);
+      const channel = supabase.channel(`call:${match.matchId}`);
+      await channel.subscribe();
+
+      // Đợi channel ready
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Gửi offer signal (chưa có SDP thật, chỉ để notify)
+      await channel.send({
+        type: "broadcast",
+        event: "offer",
+        payload: {
+          type: type,
+          from: currentPetId,
+          to: match.otherPet.id,
+          offer: null, // Sẽ được gửi sau từ call window
+        },
+      });
+      console.log("📞 Call notification sent");
+
       // Setup broadcast channel for communication with call window
       callBroadcastRef.current = new BroadcastChannel(`call-${match.matchId}`);
       callBroadcastRef.current.onmessage = (event) => {
@@ -479,17 +535,20 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       if (!callWindowRef.current) {
         alert("Please allow popups for video calls");
         setCallStatus("idle");
+        channel.unsubscribe();
         return;
       }
 
       // Set timeout: auto-end call after 60 seconds if not answered
       callTimeoutRef.current = setTimeout(() => {
         if (callStatus !== "active") {
-          alert("Call not answered");
           callWindowRef.current?.close();
           setCallStatus("idle");
         }
       }, 60000);
+
+      // Cleanup channel sau khi gửi
+      setTimeout(() => channel.unsubscribe(), 1000);
     } catch (error) {
       console.error("Error starting call:", error);
       alert("Could not start call");
@@ -763,9 +822,9 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
 
   if (!match) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex-1 flex items-center h-[calc(125vh-65px)] justify-center bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center text-gray-600">
-          <p className="text-lg">Chọn một cuộc trò chuyện để bắt đầu</p>
+          <p className="text-lg">Select a conversation to start</p>
         </div>
       </div>
     );

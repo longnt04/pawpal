@@ -78,8 +78,8 @@ export default function GlobalCallNotification() {
         id, 
         pet1_id, 
         pet2_id,
-        pet1:pets!matches_pet1_id_fkey(id, name, avatar_url),
-        pet2:pets!matches_pet2_id_fkey(id, name, avatar_url)
+        pet1:pets!matches_pet_1_id_fkey(id, name, avatar_url),
+        pet2:pets!matches_pet_2_id_fkey(id, name, avatar_url)
       `,
       )
       .or(`pet1_id.in.(${petIds.join(",")}),pet2_id.in.(${petIds.join(",")})`)
@@ -99,7 +99,9 @@ export default function GlobalCallNotification() {
 
       channel
         .on("broadcast", { event: "offer" }, async (payload: any) => {
+          console.log("🟢 Received offer event:", payload.payload);
           if (payload.payload.to === currentPet.id) {
+            console.log("🟢 Offer is for current pet, showing notification");
             // Incoming call!
             setIncomingCall({
               matchId: match.id,
@@ -114,9 +116,23 @@ export default function GlobalCallNotification() {
             ringtoneRef.current
               ?.play()
               .catch((e) => console.log("Ringtone error:", e));
+          } else {
+            console.log(
+              "🟡 Offer is for different pet:",
+              payload.payload.to,
+              "vs",
+              currentPet.id,
+            );
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log(
+            "📡 Subscribed to call channel:",
+            match.id,
+            "status:",
+            status,
+          );
+        });
 
       callChannelsRef.current.set(match.id, channel);
     });
