@@ -17,6 +17,7 @@ export class WebRTCManager {
   private localStream: MediaStream | null = null;
   private supabase = createClient();
   private channelName: string;
+  private channel: ReturnType<typeof this.supabase.channel> | null = null;
   private onRemoteStreamCallback: ((stream: MediaStream) => void) | null = null;
   private onCallEndCallback: (() => void) | null = null;
 
@@ -85,6 +86,9 @@ export class WebRTCManager {
     remotePetId: string,
     currentPetId: string,
   ): Promise<MediaStream> {
+    // Subscribe to signals FIRST
+    await this.subscribeToSignals(currentPetId);
+
     this.createPeerConnection();
     const stream = await this.getUserMedia(type);
 
@@ -104,9 +108,6 @@ export class WebRTCManager {
       from: currentPetId,
       to: remotePetId,
     });
-
-    // Subscribe to signals
-    this.subscribeToSignals(currentPetId);
 
     return stream;
   }
@@ -140,14 +141,14 @@ export class WebRTCManager {
 
   // Handle incoming offer
   async handleOffer(offer: RTCSessionDescriptionInit, currentPetId: string) {
+    // Subscribe to signals FIRST
+    await this.subscribeToSignals(currentPetId);
+
     this.createPeerConnection();
 
     await this.peerConnection!.setRemoteDescription(
       new RTCSessionDescription(offer),
     );
-
-    // Subscribe to signals before creating answer
-    this.subscribeToSignals(currentPetId);
   }
 
   // Handle answer
@@ -170,8 +171,11 @@ export class WebRTCManager {
 
   // Send signal via Supabase broadcast
   private async sendSignal(event: string, payload: any) {
-    const channel = this.supabase.channel(this.channelName);
-    await channel.send({
+    if (!this.channel) {
+      console.error("Channel not initialized");
+      return;
+    }
+    await this.channel.send({
       type: "broadcast",
       event,
       payload,
@@ -179,10 +183,15 @@ export class WebRTCManager {
   }
 
   // Subscribe to signaling messages
-  subscribeToSignals(currentPetId: string) {
-    const channel = this.supabase.channel(this.channelName);
+  async subscribeToSignals(currentPetId: string) {
+    if (this.channel) {
+      // Already subscribed
+      return;
+    }
 
-    channel
+    this.channel = this.supabase.channel(this.channelName);
+
+    this.channel
       .on("broadcast", { event: "answer" }, async (payload: any) => {
         if (payload.payload.to === currentPetId) {
           await this.handleAnswer(payload.payload.answer);
@@ -202,6 +211,9 @@ export class WebRTCManager {
         }
       })
       .subscribe();
+
+    // Wait a bit for subscription to be ready
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   // Send rejection signal
@@ -227,7 +239,10 @@ export class WebRTCManager {
     }
 
     // Unsubscribe from channel
-    this.supabase.channel(this.channelName).unsubscribe();
+    if (this.channel) {
+      await this.channel.unsubscribe();
+      this.channel = null;
+    }
   }
 
   // Set callback for remote stream
