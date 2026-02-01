@@ -23,7 +23,6 @@ export default function CallPage() {
   >(isIncoming ? "ringing" : "connecting");
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [isRequestingPermissions, setIsRequestingPermissions] = useState(false);
   const webrtcManagerRef = useRef<WebRTCManager | null>(null);
   const callStartTimeRef = useRef<number | null>(null);
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
@@ -72,7 +71,6 @@ export default function CallPage() {
     if (!webrtcManagerRef.current) return;
 
     try {
-      setIsRequestingPermissions(true);
       // Request permissions first with better error handling
       console.log("Requesting media permissions for", callType);
       const stream = await webrtcManagerRef.current.startCall(
@@ -82,13 +80,11 @@ export default function CallPage() {
       );
       console.log("Media stream acquired:", stream.getTracks());
       setLocalStream(stream);
-      setIsRequestingPermissions(false);
 
       // Notify parent window that call started
       broadcastChannel.current?.postMessage({ type: "CALL_STARTED" });
     } catch (error: any) {
       console.error("Error starting call:", error);
-      setIsRequestingPermissions(false);
 
       let errorMessage = "Could not access camera/microphone.";
       if (error.name === "NotAllowedError") {
@@ -224,35 +220,18 @@ export default function CallPage() {
   }, [isIncoming, matchId, currentPetId]);
 
   return (
-    <>
-      {isRequestingPermissions && (
-        <div className="fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center">
-          <div className="text-center text-white">
-            <div className="mb-4">
-              <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
-            </div>
-            <h2 className="text-2xl font-bold mb-2">
-              Requesting Permissions...
-            </h2>
-            <p className="text-gray-300">
-              Please allow camera and microphone access
-            </p>
-          </div>
-        </div>
-      )}
-      <VideoCallModal
-        isOpen={true}
-        callType={callType}
-        isIncoming={isIncoming}
-        callerName={remotePetName || "Unknown"}
-        callerAvatar={remotePetAvatar || null}
-        onAccept={acceptCall}
-        onReject={rejectCall}
-        onEnd={handleEndCall}
-        localStream={localStream}
-        remoteStream={remoteStream}
-        callStatus={callStatus}
-      />
-    </>
+    <VideoCallModal
+      isOpen={true}
+      callType={callType}
+      isIncoming={isIncoming}
+      callerName={remotePetName || "Unknown"}
+      callerAvatar={remotePetAvatar || null}
+      onAccept={acceptCall}
+      onReject={rejectCall}
+      onEnd={handleEndCall}
+      localStream={localStream}
+      remoteStream={remoteStream}
+      callStatus={callStatus}
+    />
   );
 }

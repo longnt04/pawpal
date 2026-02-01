@@ -27,8 +27,10 @@ export default function GlobalCallNotification() {
 
     // Setup ringtone
     if (typeof window !== "undefined") {
-      ringtoneRef.current = new Audio("/ringtone.mp3");
-      ringtoneRef.current.loop = true;
+      // Sử dụng simple beep thay vì file
+      // ringtoneRef.current = new Audio("/ringtone.mp3");
+      // ringtoneRef.current.loop = true;
+      console.log("🟢 Ringtone setup skipped - will use notification only");
     }
 
     return () => {
@@ -120,13 +122,13 @@ export default function GlobalCallNotification() {
       const channel = supabase.channel(channelName);
 
       channel
-        .on("broadcast", { event: "offer" }, async (payload: any) => {
+        .on("broadcast", { event: "incoming-call" }, async (payload: any) => {
           console.log(
-            `🟢 [${channelName}] Received offer event:`,
+            `🟢 [${channelName}] Received incoming-call event:`,
             payload.payload,
           );
           if (payload.payload.to === currentPet.id) {
-            console.log("🟢 Offer is for current pet, showing notification");
+            console.log("🟢 Call is for current pet, showing notification");
             // Incoming call!
             setIncomingCall({
               matchId: match.id,
@@ -138,12 +140,16 @@ export default function GlobalCallNotification() {
             });
 
             // Play ringtone
-            ringtoneRef.current
-              ?.play()
-              .catch((e) => console.log("Ringtone error:", e));
+            if (ringtoneRef.current) {
+              ringtoneRef.current
+                ?.play()
+                .catch((e) => console.log("Ringtone error:", e));
+            } else {
+              console.log("🟢 No ringtone - showing visual notification only");
+            }
           } else {
             console.log(
-              "🟡 Offer is for different pet:",
+              "🟡 Call is for different pet:",
               payload.payload.to,
               "vs",
               currentPet.id,

@@ -495,15 +495,14 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       // Đợi channel ready
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Gửi offer signal (chưa có SDP thật, chỉ để notify)
+      // Gửi incoming-call signal (không phải offer)
       await channel.send({
         type: "broadcast",
-        event: "offer",
+        event: "incoming-call",
         payload: {
           type: type,
           from: currentPetId,
           to: match.otherPet.id,
-          offer: null, // Sẽ được gửi sau từ call window
         },
       });
       console.log("📞 Call notification sent");
