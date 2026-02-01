@@ -47,12 +47,17 @@ export default function GlobalCallNotification() {
   }, []);
 
   const loadUserData = async () => {
+    console.log("🟢 GlobalCallNotification: Loading user data...");
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    if (!user) {
+      console.log("🔴 No user found");
+      return;
+    }
     setCurrentUserId(user.id);
+    console.log("🟢 User ID:", user.id);
 
     // Load user's pets
     const { data: petsData } = await supabase
@@ -61,6 +66,7 @@ export default function GlobalCallNotification() {
       .eq("owner_id", user.id)
       .eq("is_active", true);
 
+    console.log("🟢 Loaded pets:", petsData);
     if (petsData) {
       setUserPets(petsData);
       subscribeToAllMatches(petsData);
@@ -68,6 +74,10 @@ export default function GlobalCallNotification() {
   };
 
   const subscribeToAllMatches = async (pets: any[]) => {
+    console.log(
+      "🟢 Subscribing to matches for pets:",
+      pets.map((p) => p.id),
+    );
     // Get all matches for user's pets
     const petIds = pets.map((p) => p.id);
 
@@ -76,30 +86,45 @@ export default function GlobalCallNotification() {
       .select(
         `
         id, 
-        pet1_id, 
-        pet2_id,
+        pet_1_id, 
+        pet_2_id,
         pet1:pets!matches_pet_1_id_fkey(id, name, avatar_url),
         pet2:pets!matches_pet_2_id_fkey(id, name, avatar_url)
       `,
       )
-      .or(`pet1_id.in.(${petIds.join(",")}),pet2_id.in.(${petIds.join(",")})`)
-      .eq("status", "matched");
+      .or(
+        `pet_1_id.in.(${petIds.join(",")}),pet_2_id.in.(${petIds.join(",")})`,
+      );
 
-    if (!matches) return;
+    console.log("🟢 Found matches:", matches);
+    if (!matches || matches.length === 0) {
+      console.log("🔴 No matches found");
+      return;
+    }
 
     // Subscribe to each match's call channel
     matches.forEach((match: any) => {
       const currentPet = pets.find(
-        (p) => p.id === match.pet1_id || p.id === match.pet2_id,
+        (p) => p.id === match.pet_1_id || p.id === match.pet_2_id,
       );
       const otherPet =
-        match.pet1_id === currentPet.id ? match.pet2 : match.pet1;
+        match.pet_1_id === currentPet.id ? match.pet2 : match.pet1;
 
-      const channel = supabase.channel(`call:${match.id}`);
+      console.log(`🟢 Setting up channel for match ${match.id}:`, {
+        currentPetId: currentPet?.id,
+        otherPetId: otherPet?.id,
+        otherPetName: otherPet?.name,
+      });
+
+      const channelName = `call:${match.id}`;
+      const channel = supabase.channel(channelName);
 
       channel
         .on("broadcast", { event: "offer" }, async (payload: any) => {
-          console.log("🟢 Received offer event:", payload.payload);
+          console.log(
+            `🟢 [${channelName}] Received offer event:`,
+            payload.payload,
+          );
           if (payload.payload.to === currentPet.id) {
             console.log("🟢 Offer is for current pet, showing notification");
             // Incoming call!
