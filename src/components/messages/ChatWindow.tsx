@@ -69,8 +69,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
-  const [callType, setCallType] = useState<CallType | null>(null);
-  const [isIncomingCall, setIsIncomingCall] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
@@ -416,18 +414,10 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
   useEffect(() => {
     if (!match) return;
 
-    // Subscribe to incoming call offers
+    // Subscribe to call status updates (answer, rejected)
     callChannelRef.current = supabase.channel(`call:${match.matchId}`);
 
     callChannelRef.current
-      .on("broadcast", { event: "offer" }, async (payload: any) => {
-        if (payload.payload.to === currentPetId) {
-          // Incoming call - show notification in current window
-          setIsIncomingCall(true);
-          setCallType(payload.payload.type);
-          setCallStatus("ringing");
-        }
-      })
       .on("broadcast", { event: "answer" }, async (payload: any) => {
         if (payload.payload.to === currentPetId) {
           // Call answered
@@ -444,7 +434,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         // Call was rejected
         alert("Call was rejected");
         setCallStatus("idle");
-        setCallType(null);
         if (callWindowRef.current) {
           callWindowRef.current.close();
           callWindowRef.current = null;
@@ -461,7 +450,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     if (!match) return;
 
     try {
-      setCallType(type);
       setCallStatus("connecting");
 
       // Setup broadcast channel for communication with call window
@@ -469,12 +457,10 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       callBroadcastRef.current.onmessage = (event) => {
         if (event.data.type === "CALL_ENDED") {
           setCallStatus("idle");
-          setCallType(null);
           callWindowRef.current = null;
           callBroadcastRef.current?.close();
         } else if (event.data.type === "CALL_REJECTED") {
           setCallStatus("idle");
-          setCallType(null);
           callWindowRef.current = null;
           callBroadcastRef.current?.close();
         } else if (event.data.type === "CALL_ACCEPTED") {
@@ -502,74 +488,12 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           alert("Call not answered");
           callWindowRef.current?.close();
           setCallStatus("idle");
-          setCallType(null);
         }
       }, 60000);
     } catch (error) {
       console.error("Error starting call:", error);
       alert("Could not start call");
       setCallStatus("idle");
-    }
-  };
-
-  const acceptCall = async () => {
-    if (!match || !callType) return;
-
-    try {
-      // Setup broadcast channel for communication with call window
-      callBroadcastRef.current = new BroadcastChannel(`call-${match.matchId}`);
-      callBroadcastRef.current.onmessage = (event) => {
-        if (event.data.type === "CALL_ENDED") {
-          setCallStatus("idle");
-          setCallType(null);
-          setIsIncomingCall(false);
-          callWindowRef.current = null;
-          callBroadcastRef.current?.close();
-        }
-      };
-
-      // Open call window
-      const callUrl = `/call/${match.matchId}?type=${callType}&incoming=true&remotePetId=${match.otherPet.id}&remotePetName=${encodeURIComponent(match.otherPet.name)}&remotePetAvatar=${encodeURIComponent(match.otherPet.avatar_url || "")}&currentPetId=${currentPetId}`;
-      callWindowRef.current = window.open(
-        callUrl,
-        "_blank",
-        "width=800,height=600",
-      );
-
-      if (!callWindowRef.current) {
-        alert("Please allow popups for video calls");
-        setCallStatus("idle");
-        setCallType(null);
-        setIsIncomingCall(false);
-        return;
-      }
-
-      setCallStatus("active");
-      setIsIncomingCall(false);
-    } catch (error) {
-      console.error("Error accepting call:", error);
-      alert("Could not accept call");
-      setCallStatus("idle");
-      setCallType(null);
-      setIsIncomingCall(false);
-    }
-  };
-
-  const rejectCall = async () => {
-    // Close call window if it exists
-    if (callWindowRef.current) {
-      callBroadcastRef.current?.postMessage({ type: "END_CALL" });
-      callWindowRef.current.close();
-      callWindowRef.current = null;
-    }
-
-    setCallStatus("idle");
-    setCallType(null);
-    setIsIncomingCall(false);
-
-    if (callBroadcastRef.current) {
-      callBroadcastRef.current.close();
-      callBroadcastRef.current = null;
     }
   };
 
@@ -1028,41 +952,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
 
       {/* Input */}
       <div className="p-4 border-t border-gray-200 bg-white shadow-lg">
-        {/* Incoming Call Notification */}
-        {isIncomingCall && callStatus === "ringing" && (
-          <div className="mb-3 p-4 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-between animate-pulse">
-            <div className="flex items-center gap-3">
-              <img
-                src={
-                  match?.otherPet.avatar_url || "https://via.placeholder.com/40"
-                }
-                alt={match?.otherPet.name}
-                className="w-10 h-10 rounded-full object-cover"
-              />
-              <div className="text-white">
-                <p className="font-semibold">{match?.otherPet.name}</p>
-                <p className="text-sm">
-                  {callType === "video" ? "Video call" : "Voice call"}...
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={rejectCall}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-              >
-                Từ chối
-              </button>
-              <button
-                onClick={acceptCall}
-                className="px-4 py-2 bg-white text-green-600 rounded-lg hover:bg-gray-100"
-              >
-                Chấp nhận
-              </button>
-            </div>
-          </div>
-        )}
-
         <div className="flex items-end gap-2">
           <input
             type="file"

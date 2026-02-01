@@ -317,10 +317,12 @@ export default function MatchPage() {
         .select("to_pet_id")
         .eq("from_pet_id", currentUserPet.id);
 
-      const swipedPetIds = new Set<string>(userSwipes?.map(s => s.to_pet_id) || []);
+      const swipedPetIds = new Set<string>(
+        userSwipes?.map((s) => s.to_pet_id) || [],
+      );
 
-      filteredPets = filteredPets.filter((pet) => 
-        !matchedPetIds.has(pet.id) && !swipedPetIds.has(pet.id)
+      filteredPets = filteredPets.filter(
+        (pet) => !matchedPetIds.has(pet.id) && !swipedPetIds.has(pet.id),
       );
 
       if (ageFilter.length > 0) {
@@ -408,7 +410,6 @@ export default function MatchPage() {
 
       // Go back one card
       setCurrentIndex(currentIndex - 1);
-
     } catch (error: any) {
       console.error("Undo error:", error);
       toast.error("Không thể hoàn tác");
@@ -515,7 +516,7 @@ export default function MatchPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="h-[calc(125vh-65px)] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-pink-500 mx-auto"></div>
           <p className="text-gray-600 mt-4">Loading...</p>
@@ -525,7 +526,7 @@ export default function MatchPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="h-[calc(125vh-65px)] bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-y-auto">
       <div className="max-w-[1400px] mx-auto px-4 py-8">
         {/* 3-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -743,7 +744,7 @@ export default function MatchPage() {
                   onTouchEnd={handleDragEnd}
                 >
                   {/* Pet Image */}
-                  <div className="relative h-[500px] bg-gradient-to-br from-gray-200 to-gray-300">
+                  <div className="relative h-[475px] bg-gradient-to-br from-gray-200 to-gray-300">
                     {currentPet.avatar_url ? (
                       <img
                         src={currentPet.avatar_url}

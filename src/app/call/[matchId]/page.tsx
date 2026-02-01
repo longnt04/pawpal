@@ -23,6 +23,7 @@ export default function CallPage() {
   >(isIncoming ? "ringing" : "connecting");
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [isRequestingPermissions, setIsRequestingPermissions] = useState(false);
   const webrtcManagerRef = useRef<WebRTCManager | null>(null);
   const callStartTimeRef = useRef<number | null>(null);
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
@@ -40,9 +41,12 @@ export default function CallPage() {
     // Initialize WebRTC
     initializeCall();
 
-    // If outgoing call, start automatically
+    // If outgoing call, start automatically after a small delay
+    // This ensures the page is fully loaded and can request permissions
     if (!isIncoming) {
-      startCall();
+      setTimeout(() => {
+        startCall();
+      }, 500);
     }
 
     return () => {
@@ -68,18 +72,36 @@ export default function CallPage() {
     if (!webrtcManagerRef.current) return;
 
     try {
+      setIsRequestingPermissions(true);
+      // Request permissions first with better error handling
+      console.log("Requesting media permissions for", callType);
       const stream = await webrtcManagerRef.current.startCall(
         callType,
         remotePetId,
         currentPetId,
       );
+      console.log("Media stream acquired:", stream.getTracks());
       setLocalStream(stream);
+      setIsRequestingPermissions(false);
 
       // Notify parent window that call started
       broadcastChannel.current?.postMessage({ type: "CALL_STARTED" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting call:", error);
-      alert("Could not access camera/microphone.");
+      setIsRequestingPermissions(false);
+
+      let errorMessage = "Could not access camera/microphone.";
+      if (error.name === "NotAllowedError") {
+        errorMessage =
+          "Permission denied. Please allow camera/microphone access and try again.";
+      } else if (error.name === "NotFoundError") {
+        errorMessage = "No camera/microphone found. Please check your devices.";
+      } else if (error.name === "NotReadableError") {
+        errorMessage =
+          "Camera/microphone is already in use by another application.";
+      }
+
+      alert(errorMessage);
       window.close();
     }
   };
@@ -88,20 +110,34 @@ export default function CallPage() {
     if (!webrtcManagerRef.current) return;
 
     try {
+      console.log("Accepting call and requesting media for", callType);
       const stream = await webrtcManagerRef.current.acceptCall(
         callType,
         remotePetId,
         currentPetId,
       );
+      console.log("Media stream acquired:", stream.getTracks());
       setLocalStream(stream);
       setCallStatus("active");
       callStartTimeRef.current = Date.now();
 
       // Notify parent window that call was accepted
       broadcastChannel.current?.postMessage({ type: "CALL_ACCEPTED" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error accepting call:", error);
-      alert("Could not access camera/microphone.");
+
+      let errorMessage = "Could not access camera/microphone.";
+      if (error.name === "NotAllowedError") {
+        errorMessage =
+          "Permission denied. Please allow camera/microphone access in your browser settings and refresh.";
+      } else if (error.name === "NotFoundError") {
+        errorMessage = "No camera/microphone found. Please check your devices.";
+      } else if (error.name === "NotReadableError") {
+        errorMessage =
+          "Camera/microphone is already in use by another application.";
+      }
+
+      alert(errorMessage);
       window.close();
     }
   };
@@ -188,18 +224,35 @@ export default function CallPage() {
   }, [isIncoming, matchId, currentPetId]);
 
   return (
-    <VideoCallModal
-      isOpen={true}
-      callType={callType}
-      isIncoming={isIncoming}
-      callerName={remotePetName || "Unknown"}
-      callerAvatar={remotePetAvatar || null}
-      onAccept={acceptCall}
-      onReject={rejectCall}
-      onEnd={handleEndCall}
-      localStream={localStream}
-      remoteStream={remoteStream}
-      callStatus={callStatus}
-    />
+    <>
+      {isRequestingPermissions && (
+        <div className="fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center">
+          <div className="text-center text-white">
+            <div className="mb-4">
+              <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">
+              Requesting Permissions...
+            </h2>
+            <p className="text-gray-300">
+              Please allow camera and microphone access
+            </p>
+          </div>
+        </div>
+      )}
+      <VideoCallModal
+        isOpen={true}
+        callType={callType}
+        isIncoming={isIncoming}
+        callerName={remotePetName || "Unknown"}
+        callerAvatar={remotePetAvatar || null}
+        onAccept={acceptCall}
+        onReject={rejectCall}
+        onEnd={handleEndCall}
+        localStream={localStream}
+        remoteStream={remoteStream}
+        callStatus={callStatus}
+      />
+    </>
   );
 }

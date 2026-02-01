@@ -1,4 +1,5 @@
 import TopBar from "@/components/TopBar";
+import GlobalCallNotification from "@/components/GlobalCallNotification";
 
 export default function MainLayout({
   children,
@@ -9,6 +10,7 @@ export default function MainLayout({
     <>
       <TopBar />
       {children}
+      <GlobalCallNotification />
     </>
   );
 }
