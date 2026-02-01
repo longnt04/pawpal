@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { petId, content, images } = await request.json();
+    const { petId, content, images, video } = await request.json();
 
     const supabase = await createClient();
 
@@ -42,6 +42,7 @@ export async function POST(request: Request) {
         pet_id: petId,
         content: content,
         images: images || [],
+        video: video || null,
         created_at: new Date().toISOString(),
       })
       .select()

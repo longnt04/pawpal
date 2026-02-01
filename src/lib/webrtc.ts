@@ -112,12 +112,27 @@ export class WebRTCManager {
   }
 
   // Accept a call
-  async acceptCall(type: CallType): Promise<MediaStream> {
+  async acceptCall(
+    type: CallType,
+    remotePetId: string,
+    currentPetId: string,
+  ): Promise<MediaStream> {
+    // Get user media first
     const stream = await this.getUserMedia(type);
 
     // Add local stream tracks to peer connection
     stream.getTracks().forEach((track) => {
       this.peerConnection?.addTrack(track, stream);
+    });
+
+    // Create and send answer after adding tracks
+    const answer = await this.peerConnection!.createAnswer();
+    await this.peerConnection!.setLocalDescription(answer);
+
+    await this.sendSignal("answer", {
+      answer,
+      from: currentPetId,
+      to: remotePetId,
     });
 
     return stream;
@@ -133,18 +148,6 @@ export class WebRTCManager {
 
     // Subscribe to signals before creating answer
     this.subscribeToSignals(currentPetId);
-  }
-
-  // Send answer after accepting call
-  async sendAnswer(remotePetId: string, currentPetId: string) {
-    const answer = await this.peerConnection!.createAnswer();
-    await this.peerConnection!.setLocalDescription(answer);
-
-    await this.sendSignal("answer", {
-      answer,
-      from: currentPetId,
-      to: remotePetId,
-    });
   }
 
   // Handle answer
@@ -188,12 +191,22 @@ export class WebRTCManager {
       .on("broadcast", { event: "ice-candidate" }, async (payload: any) => {
         await this.handleIceCandidate(payload.payload.candidate);
       })
+      .on("broadcast", { event: "call-rejected" }, () => {
+        if (this.onCallEndCallback) {
+          this.onCallEndCallback();
+        }
+      })
       .on("broadcast", { event: "call-end" }, () => {
         if (this.onCallEndCallback) {
           this.onCallEndCallback();
         }
       })
       .subscribe();
+  }
+
+  // Send rejection signal
+  async sendRejectSignal() {
+    await this.sendSignal("call-rejected", {});
   }
 
   // End call

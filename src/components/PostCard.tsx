@@ -11,8 +11,8 @@ interface Comment {
   content: string;
   created_at: string;
   parent_comment_id?: string | null;
-  users: {
-    full_name: string;
+  pets: {
+    name: string;
     avatar_url?: string;
   };
   replies?: Comment[];
@@ -37,6 +37,7 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const replyFormRef = useRef<HTMLDivElement>(null);
+  const [userPet, setUserPet] = useState<any>(null);
 
   const pet = post.pets;
   const DEFAULT_COMMENTS_LIMIT = 5;
@@ -72,6 +73,19 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
     } = await supabase.auth.getUser();
     if (user) {
       setCurrentUserId(user.id);
+      // Load user's first pet
+      const { data: petsData } = await supabase
+        .from("pets")
+        .select("*")
+        .eq("owner_id", user.id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .single();
+
+      if (petsData) {
+        setUserPet(petsData);
+      }
     }
   };
 
@@ -115,14 +129,22 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
 
     if (commentsData) {
       const commentUserIds = [...new Set(commentsData.map((c) => c.user_id))];
-      const { data: commentUsers } = await supabase
-        .from("users")
-        .select("id, full_name, avatar_url")
-        .in("id", commentUserIds);
 
-      const commentUsersMap = new Map(
-        commentUsers?.map((u) => [u.id, u]) || [],
-      );
+      // Get first pet for each user who commented
+      const { data: commentPets } = await supabase
+        .from("pets")
+        .select("owner_id, name, avatar_url")
+        .in("owner_id", commentUserIds)
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
+
+      // Create map of user_id to their first pet
+      const commentPetsMap = new Map();
+      commentPets?.forEach((pet) => {
+        if (!commentPetsMap.has(pet.owner_id)) {
+          commentPetsMap.set(pet.owner_id, pet);
+        }
+      });
 
       // Load replies for each comment
       const commentsWithReplies = await Promise.all(
@@ -133,27 +155,33 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
             .eq("parent_comment_id", comment.id)
             .order("created_at", { ascending: true });
 
-          let repliesWithUsers = [];
+          let repliesWithPets = [];
           if (replies && replies.length > 0) {
             const replyUserIds = [...new Set(replies.map((r) => r.user_id))];
-            const { data: replyUsers } = await supabase
-              .from("users")
-              .select("id, full_name, avatar_url")
-              .in("id", replyUserIds);
+            const { data: replyPets } = await supabase
+              .from("pets")
+              .select("owner_id, name, avatar_url")
+              .in("owner_id", replyUserIds)
+              .eq("is_active", true)
+              .order("created_at", { ascending: true });
 
-            const replyUsersMap = new Map(
-              replyUsers?.map((u) => [u.id, u]) || [],
-            );
-            repliesWithUsers = replies.map((reply) => ({
+            const replyPetsMap = new Map();
+            replyPets?.forEach((pet) => {
+              if (!replyPetsMap.has(pet.owner_id)) {
+                replyPetsMap.set(pet.owner_id, pet);
+              }
+            });
+
+            repliesWithPets = replies.map((reply) => ({
               ...reply,
-              users: replyUsersMap.get(reply.user_id),
+              pets: replyPetsMap.get(reply.user_id),
             }));
           }
 
           return {
             ...comment,
-            users: commentUsersMap.get(comment.user_id),
-            replies: repliesWithUsers,
+            pets: commentPetsMap.get(comment.user_id),
+            replies: repliesWithPets,
           };
         }),
       );
@@ -325,6 +353,18 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
         </div>
       )}
 
+      {/* Video */}
+      {post.video && (
+        <div className="bg-black overflow-hidden">
+          <video
+            src={post.video}
+            controls
+            className="w-full h-auto max-h-96 object-contain"
+            preload="metadata"
+          />
+        </div>
+      )}
+
       {/* Interaction Summary */}
       <div className="px-4 py-2 flex items-center gap-4 text-sm text-gray-600">
         <span>{likeCount} Likes</span>
@@ -375,24 +415,20 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
               <div key={comment.id}>
                 <div className="flex gap-2">
                   <div className="w-8 h-8 mt-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
-                    {comment.users?.avatar_url ? (
+                    {comment.pets?.avatar_url ? (
                       <img
-                        src={comment.users.avatar_url}
-                        alt={comment.users.full_name}
+                        src={comment.pets.avatar_url}
+                        alt={comment.pets.name}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <img
-                        src={"/default-avatar.png"}
-                        alt={comment.users.full_name}
-                        className="w-full h-full object-cover"
-                      />
+                      <span>{comment.pets?.name?.[0] || "P"}</span>
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="bg-gray-100 rounded-lg pr-3 py-2">
+                    <div className="bg-gray-100 rounded-lg px-3 py-2">
                       <p className="font-semibold text-sm text-gray-900">
-                        {comment.users?.full_name || "User"}
+                        {comment.pets?.name || "Pet"}
                       </p>
                       <p className="text-sm text-gray-700">{comment.content}</p>
                     </div>
@@ -437,24 +473,30 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
                       </div>
                     )}
 
-                    {/* Replies
+                    {/* Replies */}
                     {comment.replies && comment.replies.length > 0 && (
-                      <div className="mt-3 space-y-2 ml-4 border-l-2 border-gray-200 pl-3">>
+                      <div className="mt-3 space-y-2 ml-4 border-l-2 border-gray-200 pl-3">
                         {comment.replies.map((reply) => (
                           <div key={reply.id} className="flex gap-2">
                             <div className="w-6 h-6 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
-                              {reply.users?.avatar_url ? (
-                                <img src={reply.users.avatar_url} alt={reply.users.full_name} className="w-full h-full object-cover" />
+                              {reply.pets?.avatar_url ? (
+                                <img
+                                  src={reply.pets.avatar_url}
+                                  alt={reply.pets.name}
+                                  className="w-full h-full object-cover"
+                                />
                               ) : (
-                                reply.users?.full_name?.[0] || "U"
+                                <span>{reply.pets?.name?.[0] || "P"}</span>
                               )}
                             </div>
                             <div className="flex-1">
                               <div className="bg-gray-100 rounded-lg px-2 py-1.5">
                                 <p className="font-semibold text-xs text-gray-900">
-                                  {reply.users?.full_name || "User"}
+                                  {reply.pets?.name || "Pet"}
                                 </p>
-                                <p className="text-xs text-gray-700">{reply.content}</p>
+                                <p className="text-xs text-gray-700">
+                                  {reply.content}
+                                </p>
                               </div>
                               <p className="text-xs text-gray-500 mt-0.5 ml-2">
                                 {getTimeAgo(reply.created_at)}
@@ -463,7 +505,7 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
                           </div>
                         ))}
                       </div>
-                    )} */}
+                    )}
                   </div>
                 </div>
               </div>
@@ -477,18 +519,23 @@ export default function PostCard({ post, onPostUpdate }: PostCardProps) {
             onClick={handleLoadMore}
             className="text-sm text-gray-400 hover:text-gray-300 mb-3"
           >
-            Load more comments ({commentCount - DEFAULT_COMMENTS_LIMIT} remaining)
+            Load more comments ({commentCount - DEFAULT_COMMENTS_LIMIT}{" "}
+            remaining)
           </button>
         )}
 
         {/* Comment Input */}
         <form onSubmit={handleComment} className="flex gap-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
-            <img
-              src="/default-avatar.png"
-              alt="User"
-              className="w-full h-full object-cover"
-            />
+            {userPet?.avatar_url ? (
+              <img
+                src={userPet.avatar_url}
+                alt={userPet.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span>{userPet?.name?.[0] || "P"}</span>
+            )}
           </div>
           <div className="flex-1 flex gap-2">
             <input

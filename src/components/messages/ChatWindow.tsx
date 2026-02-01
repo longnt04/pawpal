@@ -475,6 +475,11 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           callStartTimeRef.current = Date.now();
         }
       })
+      .on("broadcast", { event: "call-rejected" }, () => {
+        // Call was rejected
+        alert("Call was rejected");
+        endCall(false);
+      })
       .subscribe();
   };
 
@@ -513,7 +518,11 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     if (!match || !callType) return;
 
     try {
-      const stream = await webrtcManagerRef.current!.acceptCall(callType);
+      const stream = await webrtcManagerRef.current!.acceptCall(
+        callType,
+        match.otherPet.id,
+        currentPetId,
+      );
       setLocalStream(stream);
       setCallStatus("active");
 
@@ -525,11 +534,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
 
       // Record call start time
       callStartTimeRef.current = Date.now();
-
-      await webrtcManagerRef.current!.sendAnswer(
-        match.otherPet.id,
-        currentPetId,
-      );
     } catch (error) {
       console.error("Error accepting call:", error);
       alert("Could not access camera/microphone.");
@@ -537,7 +541,11 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
     }
   };
 
-  const rejectCall = () => {
+  const rejectCall = async () => {
+    // Send rejection signal to the other side
+    if (match && webrtcManagerRef.current) {
+      await webrtcManagerRef.current.sendRejectSignal();
+    }
     endCall(false);
   };
 

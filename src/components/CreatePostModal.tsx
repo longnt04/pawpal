@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { GiPawHeart } from "react-icons/gi";
-import { IoImageOutline, IoClose } from "react-icons/io5";
+import { IoImageOutline, IoClose, IoVideocam } from "react-icons/io5";
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -24,6 +24,8 @@ export default function CreatePostModal({
   const [loading, setLoading] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
@@ -58,6 +60,12 @@ export default function CreatePostModal({
       return;
     }
 
+    // Don't allow images if video is selected
+    if (selectedVideo) {
+      toast.error("Không thể chọn cả ảnh và video cùng lúc");
+      return;
+    }
+
     setSelectedImages((prev) => [...prev, ...files]);
 
     // Create previews
@@ -70,9 +78,49 @@ export default function CreatePostModal({
     });
   };
 
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Don't allow video if images are selected
+    if (selectedImages.length > 0) {
+      toast.error("Không thể chọn cả ảnh và video cùng lúc");
+      return;
+    }
+
+    // Check file size (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Video không được vượt quá 50MB");
+      return;
+    }
+
+    // Check video duration
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
+      // Max 60 seconds
+      if (video.duration > 60) {
+        toast.error("Video không được dài quá 60 giây");
+        return;
+      }
+      setSelectedVideo(file);
+      setVideoPreview(URL.createObjectURL(file));
+    };
+    video.src = URL.createObjectURL(file);
+  };
+
   const removeImage = (index: number) => {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = () => {
+    setSelectedVideo(null);
+    if (videoPreview) {
+      URL.revokeObjectURL(videoPreview);
+      setVideoPreview("");
+    }
   };
 
   const uploadImages = async (): Promise<string[]> => {
@@ -101,6 +149,28 @@ export default function CreatePostModal({
     return uploadedUrls;
   };
 
+  const uploadVideo = async (): Promise<string | null> => {
+    if (!selectedVideo) return null;
+
+    const fileExt = selectedVideo.name.split(".").pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `posts/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from("post-videos")
+      .upload(filePath, selectedVideo);
+
+    if (error) {
+      throw new Error(`Lỗi tải video: ${error.message}`);
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("post-videos").getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -111,10 +181,14 @@ export default function CreatePostModal({
 
     setLoading(true);
     try {
-      // Upload images first
+      // Upload images or video
       let imageUrls: string[] = [];
+      let videoUrl: string | null = null;
+
       if (selectedImages.length > 0) {
         imageUrls = await uploadImages();
+      } else if (selectedVideo) {
+        videoUrl = await uploadVideo();
       }
 
       const response = await fetch("/api/posts/create", {
@@ -124,6 +198,7 @@ export default function CreatePostModal({
           petId: selectedPet,
           content: content.trim(),
           images: imageUrls,
+          video: videoUrl,
         }),
       });
 
@@ -137,6 +212,7 @@ export default function CreatePostModal({
       setContent("");
       setSelectedImages([]);
       setImagePreviews([]);
+      removeVideo();
       onPostCreated();
       onClose();
     } catch (error: any) {
@@ -174,37 +250,38 @@ export default function CreatePostModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chọn thú cưng
+                Thú cưng của bạn
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
                 {selectedPet && pets.find((p) => p.id === selectedPet) && (
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    {pets.find((p) => p.id === selectedPet)?.avatar_url ? (
-                      <img
-                        src={pets.find((p) => p.id === selectedPet)?.avatar_url}
-                        alt="Pet"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-white font-bold text-lg">
-                        {pets.find((p) => p.id === selectedPet)?.name?.[0] ||
-                          "P"}
-                      </span>
-                    )}
-                  </div>
+                  <>
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      {pets.find((p) => p.id === selectedPet)?.avatar_url ? (
+                        <img
+                          src={
+                            pets.find((p) => p.id === selectedPet)?.avatar_url
+                          }
+                          alt="Pet"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-white font-bold text-lg">
+                          {pets.find((p) => p.id === selectedPet)?.name?.[0] ||
+                            "P"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">
+                        {pets.find((p) => p.id === selectedPet)?.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {pets.find((p) => p.id === selectedPet)?.breed ||
+                          "Thú cưng của bạn"}
+                      </p>
+                    </div>
+                  </>
                 )}
-                <select
-                  value={selectedPet}
-                  onChange={(e) => setSelectedPet(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-gray-200 rounded-lg text-gray-900 bg-gray-100 focus:ring-2 focus:ring-pink-400 focus:border-transparent"
-                  required
-                >
-                  {pets.map((pet) => (
-                    <option key={pet.id} value={pet.id}>
-                      {pet.name}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
 
@@ -236,7 +313,9 @@ export default function CreatePostModal({
                     multiple
                     onChange={handleImageSelect}
                     className="hidden"
-                    disabled={selectedImages.length >= 4}
+                    disabled={
+                      selectedImages.length >= 4 || selectedVideo !== null
+                    }
                   />
                 </label>
 
@@ -258,6 +337,44 @@ export default function CreatePostModal({
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Video ngắn (Tối đa 60 giây)
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition">
+                  <IoVideocam className="text-2xl text-gray-500" />
+                  <span className="text-gray-600">Chọn video</span>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoSelect}
+                    className="hidden"
+                    disabled={
+                      selectedImages.length > 0 || selectedVideo !== null
+                    }
+                  />
+                </label>
+
+                {videoPreview && (
+                  <div className="relative group">
+                    <video
+                      src={videoPreview}
+                      controls
+                      className="w-full h-48 object-cover rounded-lg bg-black"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeVideo}
+                      className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition"
+                    >
+                      <IoClose className="text-lg" />
+                    </button>
                   </div>
                 )}
               </div>
