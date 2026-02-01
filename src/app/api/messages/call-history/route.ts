@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { matchId, callType, duration } = await request.json();
+    const { matchId, callType, duration, isIncoming } = await request.json();
 
     if (!matchId || !callType || duration === undefined) {
       return NextResponse.json(
@@ -24,13 +24,34 @@ export async function POST(request: Request) {
     // Get user's pet
     const { data: pet } = await supabase
       .from("pets")
-      .select("id")
+      .select("id, name")
       .eq("owner_id", user.id)
       .single();
 
     if (!pet) {
       return NextResponse.json({ error: "Pet not found" }, { status: 404 });
     }
+
+    // Get match to find other pet's name
+    const { data: match } = await supabase
+      .from("matches")
+      .select(
+        `
+        pet_1_id,
+        pet_2_id,
+        pet1:pets!matches_pet_1_id_fkey(name),
+        pet2:pets!matches_pet_2_id_fkey(name)
+      `,
+      )
+      .eq("id", matchId)
+      .single();
+
+    if (!match) {
+      return NextResponse.json({ error: "Match not found" }, { status: 404 });
+    }
+
+    const otherPet =
+      match.pet_1_id === pet.id ? match.pet2?.[0] : match.pet1?.[0];
 
     // Format duration
     const minutes = Math.floor(duration / 60);
@@ -45,8 +66,19 @@ export async function POST(request: Request) {
       durationText = `${seconds}s`;
     }
 
-    // Create call history message
-    const callMessage = `${callType === "video" ? "Video call" : "Voice call"} - ${durationText}`;
+    // Create call message based on who initiated
+    // If isIncoming is false, current user called -> "You called [name]"
+    // If isIncoming is true, current user received -> "Incoming call from [name]"
+    const callTypeText = callType === "video" ? "Video call" : "Voice call";
+    let callMessage = "";
+
+    if (isIncoming === false) {
+      // Current user initiated the call
+      callMessage = `${callTypeText}: You called ${otherPet?.name || "Unknown"} - ${durationText}`;
+    } else {
+      // Current user received the call
+      callMessage = `${callTypeText}: ${otherPet?.name || "Unknown"} called you - ${durationText}`;
+    }
 
     const { data: message, error } = await supabase
       .from("messages")

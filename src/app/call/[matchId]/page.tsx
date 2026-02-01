@@ -26,6 +26,7 @@ export default function CallPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasJoined, setHasJoined] = useState(false);
+  const [callStartTime, setCallStartTime] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -37,11 +38,10 @@ export default function CallPage() {
 
       try {
         setError(null);
-        console.log("🔵 Getting Stream token...");
+
         const { token, userId, userImage, userName } =
           await getStreamVideoToken();
 
-        console.log("🔵 Token received for user:", userId);
 
         if (!isMounted) return;
 
@@ -49,7 +49,6 @@ export default function CallPage() {
           throw new Error("NEXT_PUBLIC_STREAM_API_KEY is not set");
         }
 
-        console.log("🔵 Creating StreamVideoClient...");
         const videoClient = new StreamVideoClient({
           apiKey: process.env.NEXT_PUBLIC_STREAM_API_KEY!,
           user: {
@@ -62,22 +61,18 @@ export default function CallPage() {
 
         if (!isMounted) return;
 
-        console.log("🔵 Creating call:", matchId);
         const videoCall = videoClient.call("default", matchId);
-
-        console.log("🔵 Joining call, isIncoming:", isIncoming);
         if (isIncoming) {
           await videoCall.join();
         } else {
           await videoCall.join({ create: true });
         }
-
-        console.log("🔵 Call joined successfully");
         if (!isMounted) return;
 
         setClient(videoClient);
         setCall(videoCall);
         setHasJoined(true);
+        setCallStartTime(Date.now());
       } catch (error: any) {
         console.error("❌ Call error:", error);
         console.error("Error details:", error.message, error.stack);
@@ -101,7 +96,33 @@ export default function CallPage() {
     };
   }, [matchId, isIncoming, hasJoined]);
 
-  const handleCallEnd = () => {
+  const handleCallEnd = async () => {
+    // Calculate call duration
+    let duration = 0;
+    if (callStartTime) {
+      duration = Math.floor((Date.now() - callStartTime) / 1000);
+      console.log("📞 Call duration:", duration, "seconds");
+
+      // Only save if call lasted more than 0 seconds
+      if (duration > 0) {
+        try {
+          await fetch("/api/messages/call-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              matchId,
+              callType: "video", // Stream.io supports video by default
+              duration,
+              isIncoming, // Send who initiated the call
+            }),
+          });
+          console.log("✅ Call history saved");
+        } catch (error) {
+          console.error("❌ Error saving call history:", error);
+        }
+      }
+    }
+
     window.close();
   };
 

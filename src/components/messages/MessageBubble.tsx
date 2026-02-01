@@ -76,15 +76,46 @@ export default function MessageBubble({
     (message.content.includes("Video call") ||
       message.content.includes("Voice call"));
 
-  // Render call message differently
+  // Render call message with avatar
   if (isCallMessage) {
     return (
-      <div className="flex justify-center my-2">
-        <div className="bg-gray-100 text-gray-600 px-4 py-2 rounded-full text-sm flex items-center gap-2">
-          <span>{message.content}</span>
-          <span className="text-xs text-gray-500">
-            {format(new Date(message.created_at), "HH:mm")}
-          </span>
+      <div
+        className={`flex items-end gap-2 ${showTimestamp ? "mb-4" : "mb-1"} ${
+          isOwnMessage ? "flex-row-reverse" : "flex-row"
+        }`}
+      >
+        {!isOwnMessage && showAvatar && (
+          <Image
+            src={message.sender.avatar_url || "https://via.placeholder.com/32"}
+            alt={message.sender.name}
+            width={32}
+            height={32}
+            className="rounded-full object-cover max-w-[32px] max-h-[32px] mb-5"
+          />
+        )}
+        {!isOwnMessage && !showAvatar && <div className="w-8 h-8" />}
+
+        <div className={`max-w-[70%]`}>
+          <div
+            className={`${
+              isOwnMessage
+                ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white"
+                : "bg-gray-100 text-gray-700"
+            } px-4 py-2.5 rounded-2xl text-sm`}
+          >
+            <div className="flex flex-col">
+              <span className="font-medium">{message.content}</span>
+              {showTimestamp && (
+                <span
+                  className={`text-xs mt-1 ${
+                    isOwnMessage ? "text-pink-100" : "text-gray-500"
+                  }`}
+                >
+                  {format(new Date(message.created_at), "HH:mm")}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

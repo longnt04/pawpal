@@ -123,12 +123,30 @@ export default function MessagesPage() {
             });
 
             // Sort lại: conversation có tin nhắn mới lên đầu
-            return updatedMatches.sort((a, b) => {
+            const sorted = updatedMatches.sort((a, b) => {
               const timeA = a.lastMessage?.created_at || a.createdAt;
               const timeB = b.lastMessage?.created_at || b.createdAt;
               return new Date(timeB).getTime() - new Date(timeA).getTime();
             });
+            return sorted;
           });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+        },
+        async (payload) => {
+          const updatedMessage = payload.new;
+
+          // Nếu tin nhắn được đánh dấu đã đọc, cập nhật unread count
+          if (updatedMessage.is_read) {
+            // Reload matches để có count chính xác từ database
+            loadMatches();
+          }
         },
       )
       .on(
@@ -174,6 +192,33 @@ export default function MessagesPage() {
     );
   };
 
+  const handleMessageSent = (matchId: string, message: any) => {
+    // Update conversation list immediately
+    setMatches((prevMatches) => {
+      const updatedMatches = prevMatches.map((match) => {
+        if (match.matchId === matchId) {
+          return {
+            ...match,
+            lastMessage: {
+              content: message.content,
+              image_url: message.image_url,
+              created_at: message.created_at,
+              sender_pet_id: message.sender_pet_id,
+            },
+          };
+        }
+        return match;
+      });
+
+      // Sort lại: conversation mới nhất lên đầu
+      return updatedMatches.sort((a, b) => {
+        const timeA = a.lastMessage?.created_at || a.createdAt;
+        const timeB = b.lastMessage?.created_at || b.createdAt;
+        return new Date(timeB).getTime() - new Date(timeA).getTime();
+      });
+    });
+  };
+
   const selectedMatch = matches.find((m) => m.matchId === selectedMatchId);
 
   if (isLoading) {
@@ -211,7 +256,11 @@ export default function MessagesPage() {
         onSelectMatch={handleSelectMatch}
         currentPetId={currentPetId}
       />
-      <ChatWindow match={selectedMatch || null} currentPetId={currentPetId} />
+      <ChatWindow
+        match={selectedMatch || null}
+        currentPetId={currentPetId}
+        onMessageSent={handleMessageSent}
+      />
     </div>
   );
 }

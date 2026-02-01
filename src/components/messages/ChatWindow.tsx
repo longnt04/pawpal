@@ -52,9 +52,14 @@ interface Match {
 interface ChatWindowProps {
   match: Match | null;
   currentPetId: string;
+  onMessageSent?: (matchId: string, message: any) => void;
 }
 
-export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
+export default function ChatWindow({
+  match,
+  currentPetId,
+  onMessageSent,
+}: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -163,7 +168,7 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         callBroadcastRef.current = null;
       }
     };
-  }, [match]);
+  }, [match?.matchId]); // Only depend on matchId, not entire match object
 
   const loadCurrentUser = async () => {
     const {
@@ -244,6 +249,14 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ matchId: match.matchId }),
       });
+
+      // Update local state immediately - mark all messages from other user as read
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.sender_pet_id !== currentPetId ? { ...msg, is_read: true } : msg,
+        ),
+      );
+
     } catch (error) {
       console.error("Error marking messages as read:", error);
     }
@@ -355,6 +368,11 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
             if (data.sender_pet_id !== currentPetId) {
               markMessagesAsRead();
             }
+
+            // Notify parent about new message (from other user) for conversation list update
+            if (onMessageSent && data.sender_pet_id !== currentPetId) {
+              onMessageSent(match.matchId, message);
+            } 
           }
         },
       )
@@ -488,7 +506,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
       setCallStatus("connecting");
 
       // Send call notification via Supabase broadcast
-      console.log("📞 Sending call notification to", match.otherPet.id);
       const channel = supabase.channel(`call:${match.matchId}`);
       await channel.subscribe();
 
@@ -505,7 +522,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           matchId: match.matchId,
         },
       });
-      console.log("📞 Call notification sent");
 
       // Setup broadcast channel for communication with call window
       callBroadcastRef.current = new BroadcastChannel(`call-${match.matchId}`);
@@ -552,7 +568,6 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
 
       // Set timeout: auto-end call after 60 seconds if not answered
       callTimeoutRef.current = setTimeout(() => {
-        console.log("⏰ Call timeout - no answer after 60 seconds");
         if (callWindowRef.current && !callWindowRef.current.closed) {
           callWindowRef.current.close();
         }
@@ -816,6 +831,12 @@ export default function ChatWindow({ match, currentPetId }: ChatWindowProps) {
           prev.filter((m) => m.id !== optimisticMessage.id),
         );
         console.error("Failed to send message");
+      } else {
+        // Notify parent about new message for conversation list update
+        const result = await response.json();
+        if (onMessageSent && result.message) {
+          onMessageSent(match.matchId, result.message);
+        }
       }
       // Real message will be added via realtime subscription
     } catch (error) {

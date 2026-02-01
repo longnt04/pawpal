@@ -42,37 +42,28 @@ export async function POST(request: NextRequest) {
 
     const userPetId = pets[0].id;
 
-    // Tìm tin nhắn cuối cùng của user trong match này
-    const { data: lastUserMessage } = await supabase
-      .from("messages")
-      .select("created_at")
-      .eq("match_id", matchId)
-      .eq("sender_pet_id", userPetId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    console.log("📖 Marking messages as read:", { matchId, userPetId });
 
-    // Mark messages from other pet as read
-    // Chỉ đánh dấu tin nhắn SAU tin nhắn cuối cùng của user
-    let updateQuery = supabase
+    // Mark ALL unread messages from other pet as read
+    // Simple: just mark all messages in this match that are NOT from current user and are unread
+    const { data, error: updateError } = await supabase
       .from("messages")
       .update({ is_read: true })
       .eq("match_id", matchId)
       .eq("is_read", false)
-      .neq("sender_pet_id", userPetId);
+      .neq("sender_pet_id", userPetId)
+      .select();
 
-    // Nếu user đã từng gửi tin nhắn, chỉ đánh dấu tin nhắn sau đó
-    if (lastUserMessage) {
-      updateQuery = updateQuery.gt("created_at", lastUserMessage.created_at);
-    }
-
-    const { error: updateError } = await updateQuery;
+    console.log("📖 Update result:", {
+      updatedCount: data?.length,
+      error: updateError,
+    });
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, updatedCount: data?.length });
   } catch (error) {
     console.error("Error marking messages as read:", error);
     return NextResponse.json(
