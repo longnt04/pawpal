@@ -179,6 +179,7 @@ export default function CartPage() {
         amount: total,
         address,
         phone,
+        items,
       }),
     });
 
